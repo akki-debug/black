@@ -45,10 +45,14 @@ else:
 # Performance Statistics
 
 def calculate_performance(returns):
+    cumulative_returns = (1 + returns).cumprod()
+    peak = cumulative_returns.cummax()
+    drawdown = (cumulative_returns - peak) / peak
+    max_drawdown = drawdown.min()
+    
     annual_return = returns.mean() * 252
     annual_volatility = returns.std() * np.sqrt(252)
     sharpe_ratio = annual_return / annual_volatility
-    max_drawdown = (returns.cumsum().expanding().max() - returns.cumsum()).min()
     stability = returns.autocorr()
     omega_ratio = (returns[returns > 0].sum() / -returns[returns < 0].sum())
     sortino_ratio = annual_return / returns[returns < 0].std()
@@ -56,8 +60,12 @@ def calculate_performance(returns):
     kurtosis = returns.kurtosis()
     tail_ratio = returns.quantile(0.95) / abs(returns.quantile(0.05))
     daily_var = returns.quantile(0.05)
-    return [annual_return, annual_volatility, sharpe_ratio, max_drawdown, stability, 
-            omega_ratio, sortino_ratio, skewness, kurtosis, tail_ratio, daily_var]
+    
+    return [
+        f"{annual_return:.2%}", f"{annual_volatility:.2%}", f"{sharpe_ratio:.2f}", f"{max_drawdown:.2%}", 
+        f"{stability:.2f}", f"{omega_ratio:.2f}", f"{sortino_ratio:.2f}", f"{skewness:.2f}", 
+        f"{kurtosis:.2f}", f"{tail_ratio:.2f}", f"{daily_var:.2%}"
+    ]
 
 strategy_stats = calculate_performance(st.session_state.returns.mean(axis=1))
 benchmark_ticker = "^NSEI"  # Nifty 50 Index
@@ -131,6 +139,5 @@ if st.button("Run Optimization"):
         st.success("Optimized portfolio successfully generated!")
     else:
         st.error("Portfolio optimization failed.")
-
 
 
