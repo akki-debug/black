@@ -57,6 +57,26 @@ ax2.set_title("Stock Correlation Heatmap")
 st.pyplot(fig2)
 plt.close(fig2)
 
+# Portfolio Optimization Button
+st.subheader("Optimize Portfolio")
+if st.button("Run Optimization"):
+    def portfolio_volatility(weights, cov_matrix):
+        return np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+    
+    num_assets = len(st.session_state.returns.columns)
+    initial_weights = np.ones(num_assets) / num_assets
+    bounds = tuple((0, 1) for asset in range(num_assets))
+    constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
+    
+    optimized = sco.minimize(portfolio_volatility, initial_weights, args=(st.session_state.returns.cov()),
+                              method='SLSQP', bounds=bounds, constraints=constraints)
+    
+    if optimized.success:
+        st.session_state.portafolios_bl = pd.DataFrame([optimized.x], columns=st.session_state.returns.columns)
+        st.success("Optimized portfolio successfully generated!")
+    else:
+        st.error("Portfolio optimization failed.")
+
 # Compute Performance Metrics
 st.subheader("Performance Metrics")
 sharpe_ratio = st.session_state.returns.mean() / st.session_state.returns.std() * np.sqrt(252)
@@ -78,52 +98,30 @@ ax3.set_title("Drawdown Over Time")
 st.pyplot(fig3)
 plt.close(fig3)
 
-# Compute Covariance Matrix
-st.subheader("Covariance Matrix of the Excess Annual Returns:")
-cov_matrix = st.session_state.returns.cov()
-st.dataframe(cov_matrix)
-
-# Compute Equilibrium Excess Returns
-ew_pesos = np.ones(len(cov_matrix)) / len(cov_matrix)
-desv_est_bl = np.sqrt(ew_pesos.T @ cov_matrix @ ew_pesos)
-Lambda = (1 / desv_est_bl) * 0.5
-vec_ec_bl = (cov_matrix @ ew_pesos) * Lambda
-
-st.subheader("Equilibrium Vector:")
-st.dataframe(vec_ec_bl)
-
-# Compute Prior Variance
-Tau = 1 / len(st.session_state.returns)
-var_priori = Tau * cov_matrix
-st.subheader("Prior Variance:")
-st.dataframe(var_priori)
-
+# Backtesting
 st.subheader("Backtesting: Portfolio Performance")
-if "portafolios_bl" in st.session_state and st.session_state.portafolios_bl is not None:
-    if not st.session_state.portafolios_bl.empty:
-        weights = st.session_state.portafolios_bl.iloc[0, :-1].values
-        if len(weights) != len(st.session_state.returns.columns):
-            st.error("Mismatch between portfolio weights and returns. Check asset selection.")
-            st.stop()
-        
-        portfolio_returns = (st.session_state.returns @ weights).cumsum()
-        equal_weight_returns = (st.session_state.returns.mean(axis=1)).cumsum()
-        
-        fig6, ax6 = plt.subplots(figsize=(12, 6))
-        sns.lineplot(x=portfolio_returns.index, y=portfolio_returns, label="Optimized Portfolio", ax=ax6)
-        sns.lineplot(x=equal_weight_returns.index, y=equal_weight_returns, label="Equal Weight Portfolio", ax=ax6)
-        ax6.set_title("Cumulative Portfolio Returns")
-        st.pyplot(fig6)
-        plt.close(fig6)
-        
-        st.write("Final Portfolio Performance:")
-        final_returns = pd.DataFrame({
-            "Optimized Portfolio": portfolio_returns.iloc[-1],
-            "Equal Weight Portfolio": equal_weight_returns.iloc[-1]
-        }, index=["Total Return"])
-        st.dataframe(final_returns)
-    else:
-        st.warning("Portfolio weights are empty. Run optimization first.")
+if st.session_state.portafolios_bl is not None:
+    weights = st.session_state.portafolios_bl.iloc[0].values
+    if len(weights) != len(st.session_state.returns.columns):
+        st.error("Mismatch between portfolio weights and returns. Check asset selection.")
+        st.stop()
+    
+    portfolio_returns = (st.session_state.returns @ weights).cumsum()
+    equal_weight_returns = (st.session_state.returns.mean(axis=1)).cumsum()
+    
+    fig6, ax6 = plt.subplots(figsize=(12, 6))
+    sns.lineplot(x=portfolio_returns.index, y=portfolio_returns, label="Optimized Portfolio", ax=ax6)
+    sns.lineplot(x=equal_weight_returns.index, y=equal_weight_returns, label="Equal Weight Portfolio", ax=ax6)
+    ax6.set_title("Cumulative Portfolio Returns")
+    st.pyplot(fig6)
+    plt.close(fig6)
+    
+    st.write("Final Portfolio Performance:")
+    final_returns = pd.DataFrame({
+        "Optimized Portfolio": portfolio_returns.iloc[-1],
+        "Equal Weight Portfolio": equal_weight_returns.iloc[-1]
+    }, index=["Total Return"])
+    st.dataframe(final_returns)
 else:
     st.warning("Optimized portfolio not found. Run optimization first.")
 
