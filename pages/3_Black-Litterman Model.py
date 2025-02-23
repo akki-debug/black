@@ -57,6 +57,27 @@ ax2.set_title("Stock Correlation Heatmap")
 st.pyplot(fig2)
 plt.close(fig2)
 
+# Compute Performance Metrics
+st.subheader("Performance Metrics")
+sharpe_ratio = st.session_state.returns.mean() / st.session_state.returns.std() * np.sqrt(252)
+st.write("Sharpe Ratio of Selected Stocks:")
+st.dataframe(sharpe_ratio.rename("Sharpe Ratio"))
+
+# Compute Drawdown Analysis
+cumulative_returns = (1 + st.session_state.returns).cumprod()
+rolling_max = cumulative_returns.cummax()
+drawdown = (cumulative_returns - rolling_max) / rolling_max
+max_drawdown = drawdown.min()
+
+st.subheader("Maximum Drawdown")
+st.dataframe(max_drawdown.rename("Max Drawdown"))
+
+fig3, ax3 = plt.subplots(figsize=(12, 6))
+sns.lineplot(data=drawdown, ax=ax3)
+ax3.set_title("Drawdown Over Time")
+st.pyplot(fig3)
+plt.close(fig3)
+
 # Compute Covariance Matrix
 st.subheader("Covariance Matrix of the Excess Annual Returns:")
 cov_matrix = st.session_state.returns.cov()
@@ -77,55 +98,35 @@ var_priori = Tau * cov_matrix
 st.subheader("Prior Variance:")
 st.dataframe(var_priori)
 
-st.subheader("Financial Views:")
-st.write("Now, introduce your views!")
-num_views = st.number_input("Select the number of views:", min_value=1, step=1)
-views_editable = pd.DataFrame(0, index=[f"View {i+1}" for i in range(num_views)], columns=cov_matrix.columns)
-edited_views = st.data_editor(views_editable)
+st.subheader("Efficient Frontier")
+num_portfolios = 500
+results = np.zeros((3, num_portfolios))
+weights_record = []
 
-returns_editable = pd.DataFrame(0, index=[f"View {i+1}" for i in range(num_views)], columns=["Expected Return"])
-edited_returns = st.data_editor(returns_editable)
+for i in range(num_portfolios):
+    weights = np.random.dirichlet(np.ones(len(cov_matrix)), size=1).flatten()
+    weights_record.append(weights)
+    port_return = np.sum(weights * st.session_state.returns.mean()) * 252
+    port_volatility = np.sqrt(np.dot(weights.T, np.dot(cov_matrix * 252, weights)))
+    sharpe = port_return / port_volatility
+    results[0, i] = port_return
+    results[1, i] = port_volatility
+    results[2, i] = sharpe
 
-conf_editable = pd.DataFrame(0, index=[f"View {i+1}" for i in range(num_views)], columns=["Confidence"])
-edited_conf = st.data_editor(conf_editable)
-
-if st.button("Continue"):
-    try:
-        P = np.array(edited_views)
-        Q = np.array(edited_returns / 100)
-        O = np.diag(edited_conf / 100)
-        st.success("Information loaded successfully!")
-    except Exception as e:
-        st.error(f"An error occurred: {e}")
-        st.stop()
-
-    aux1 = np.array(P @ var_priori @ P.T)
-    O2 = np.diag(np.diag(aux1))
-    E = np.linalg.inv(np.linalg.inv(Tau * cov_matrix) + P.T @ np.linalg.inv(O2) @ P) @ (
-        np.linalg.inv(Tau * cov_matrix) @ vec_ec_bl + P.T @ np.linalg.inv(O2) @ Q)
-    varianza_E = np.linalg.inv(np.linalg.inv(Tau * cov_matrix) + P.T @ np.linalg.inv(O2) @ P)
-
-    Lambda1 = Lambda
-    list_lambda = np.arange(1, 7.5, 0.5).tolist()
-    list_lambda.insert(0, Lambda1.round(4))
-
-    portafolios_bl = pd.DataFrame()
-    for i in list_lambda:
-        weights_bl = np.linalg.inv(cov_matrix * i) @ E
-        portafolios_bl = pd.concat([portafolios_bl, pd.DataFrame(weights_bl).T.rename(index={0: i})])
-
-    portafolios_bl.index.name = "Lambda"
-    portafolios_bl.columns = cov_matrix.columns
-    portafolios_bl['Total'] = portafolios_bl.sum(axis=1)
-    portafolios_bl = portafolios_bl.sort_index()
-    st.session_state.portafolios_bl = portafolios_bl
+fig4, ax4 = plt.subplots(figsize=(12, 6))
+scatter = ax4.scatter(results[1, :], results[0, :], c=results[2, :], cmap="coolwarm", marker="o")
+ax4.set_title("Efficient Frontier")
+ax4.set_xlabel("Volatility")
+ax4.set_ylabel("Expected Return")
+st.pyplot(fig4)
+plt.close(fig4)
 
 if "portafolios_bl" in st.session_state and st.session_state.portafolios_bl is not None:
     st.subheader("Optimized Portfolio with Varying Risk Aversion Levels (λ)")
     st.dataframe(st.session_state.portafolios_bl)
     
-    fig3, ax3 = plt.subplots(figsize=(12, 6))
-    sns.barplot(data=st.session_state.portafolios_bl.drop(columns=["Total"]).T, ax=ax3)
-    ax3.set_title("Asset Allocation by Risk Aversion Level (λ)")
-    st.pyplot(fig3)
-    plt.close(fig3)
+    fig5, ax5 = plt.subplots(figsize=(12, 6))
+    sns.barplot(data=st.session_state.portafolios_bl.drop(columns=["Total"]).T, ax=ax5)
+    ax5.set_title("Asset Allocation by Risk Aversion Level (λ)")
+    st.pyplot(fig5)
+    plt.close(fig5)
