@@ -8,4 +8,4 @@ seaborn
 fredapi
 requests
 plotly
-git+https://github.com/quantopian/pyfolio
+
