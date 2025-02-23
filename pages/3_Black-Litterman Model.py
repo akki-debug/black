@@ -98,47 +98,32 @@ var_priori = Tau * cov_matrix
 st.subheader("Prior Variance:")
 st.dataframe(var_priori)
 
-st.subheader("Efficient Frontier")
-num_portfolios = 500
-results = np.zeros((3, num_portfolios))
-weights_record = []
-
-for i in range(num_portfolios):
-    weights = np.random.dirichlet(np.ones(len(cov_matrix)), size=1).flatten()
-    weights_record.append(weights)
-    port_return = np.sum(weights * st.session_state.returns.mean()) * 252
-    port_volatility = np.sqrt(np.dot(weights.T, np.dot(cov_matrix * 252, weights)))
-    sharpe = port_return / port_volatility
-    results[0, i] = port_return
-    results[1, i] = port_volatility
-    results[2, i] = sharpe
-
-fig4, ax4 = plt.subplots(figsize=(12, 6))
-scatter = ax4.scatter(results[1, :], results[0, :], c=results[2, :], cmap="coolwarm", marker="o")
-ax4.set_title("Efficient Frontier")
-ax4.set_xlabel("Volatility")
-ax4.set_ylabel("Expected Return")
-st.pyplot(fig4)
-plt.close(fig4)
-
-# Backtesting
 st.subheader("Backtesting: Portfolio Performance")
 if "portafolios_bl" in st.session_state and st.session_state.portafolios_bl is not None:
-    weights = st.session_state.portafolios_bl.iloc[0, :-1].values
-    portfolio_returns = (st.session_state.returns @ weights).cumsum()
-    equal_weight_returns = (st.session_state.returns.mean(axis=1)).cumsum()
-    
-    fig6, ax6 = plt.subplots(figsize=(12, 6))
-    sns.lineplot(x=portfolio_returns.index, y=portfolio_returns, label="Optimized Portfolio", ax=ax6)
-    sns.lineplot(x=equal_weight_returns.index, y=equal_weight_returns, label="Equal Weight Portfolio", ax=ax6)
-    ax6.set_title("Cumulative Portfolio Returns")
-    st.pyplot(fig6)
-    plt.close(fig6)
-    
-    st.write("Final Portfolio Performance:")
-    final_returns = pd.DataFrame({
-        "Optimized Portfolio": portfolio_returns.iloc[-1],
-        "Equal Weight Portfolio": equal_weight_returns.iloc[-1]
-    }, index=["Total Return"])
-    st.dataframe(final_returns)
+    if not st.session_state.portafolios_bl.empty:
+        weights = st.session_state.portafolios_bl.iloc[0, :-1].values
+        if len(weights) != len(st.session_state.returns.columns):
+            st.error("Mismatch between portfolio weights and returns. Check asset selection.")
+            st.stop()
+        
+        portfolio_returns = (st.session_state.returns @ weights).cumsum()
+        equal_weight_returns = (st.session_state.returns.mean(axis=1)).cumsum()
+        
+        fig6, ax6 = plt.subplots(figsize=(12, 6))
+        sns.lineplot(x=portfolio_returns.index, y=portfolio_returns, label="Optimized Portfolio", ax=ax6)
+        sns.lineplot(x=equal_weight_returns.index, y=equal_weight_returns, label="Equal Weight Portfolio", ax=ax6)
+        ax6.set_title("Cumulative Portfolio Returns")
+        st.pyplot(fig6)
+        plt.close(fig6)
+        
+        st.write("Final Portfolio Performance:")
+        final_returns = pd.DataFrame({
+            "Optimized Portfolio": portfolio_returns.iloc[-1],
+            "Equal Weight Portfolio": equal_weight_returns.iloc[-1]
+        }, index=["Total Return"])
+        st.dataframe(final_returns)
+    else:
+        st.warning("Portfolio weights are empty. Run optimization first.")
+else:
+    st.warning("Optimized portfolio not found. Run optimization first.")
 
