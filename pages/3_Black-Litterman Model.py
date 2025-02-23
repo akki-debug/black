@@ -137,7 +137,8 @@ if st.button("Run Optimization"):
     if optimized.success:
         st.session_state.portafolios_bl = pd.DataFrame([optimized.x], columns=st.session_state.returns.columns)
         st.success("Optimized portfolio successfully generated!")
+        st.markdown("## Optimized Portfolio Weights")
+        st.table(st.session_state.portafolios_bl.T.rename(columns={0: "Weight"}))
     else:
         st.error("Portfolio optimization failed.")
-
 
