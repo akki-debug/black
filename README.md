@@ -1,1 +1,1 @@
-https://blackup1.streamlit.app/
+https://up1-black.streamlit.app/
