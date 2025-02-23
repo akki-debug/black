@@ -7,6 +7,7 @@ import seaborn as sns
 import streamlit as st
 from datetime import datetime
 from scipy.linalg import inv
+import pyfolio as pf
 
 # Page Config
 st.set_page_config(page_title="Black-Litterman Model", page_icon="mag")
@@ -104,23 +105,23 @@ if st.button("Calculate Black-Litterman Portfolio"):
         st.success("Optimized Black-Litterman portfolio successfully generated!")
         
         # Compute portfolio returns
-        portfolio_returns = (st.session_state.returns @ optimized.x).cumsum()
+        portfolio_returns = (st.session_state.returns @ optimized.x)
         
-        # Visualization
-        st.subheader("Portfolio Performance")
-        fig3, ax3 = plt.subplots(figsize=(12, 6))
-        sns.lineplot(data=portfolio_returns, ax=ax3)
-        ax3.set_title("Cumulative Portfolio Returns")
-        st.pyplot(fig3)
-        plt.close(fig3)
+        # Generate Performance Statistics
+        st.subheader("Performance Statistics")
+        perf_stats = pf.timeseries.perf_stats(portfolio_returns)
+        st.dataframe(perf_stats)
         
-        # Risk Metrics
-        max_drawdown = (portfolio_returns - portfolio_returns.cummax()).min()
-        sharpe_ratio = (portfolio_returns.mean() / portfolio_returns.std()) * np.sqrt(252)
+        # Generate Comparison with Benchmark (S&P BSE-SENSEX)
+        benchmark = '^BSESN'
+        benchmark_rets = yf.download(benchmark, start=start_date, end=end_date)['Adj Close'].pct_change().dropna()
+        benchmark_rets = benchmark_rets.filter(portfolio_returns.index)
+        benchmark_rets.name = "S&P BSE-SENSEX"
         
-        st.markdown("## Portfolio Performance Metrics")
-        metrics = pd.DataFrame({"Sharpe Ratio": [sharpe_ratio], "Max Drawdown": [max_drawdown]})
-        st.dataframe(metrics)
+        fig, ax = plt.subplots(figsize=(14, 8))
+        pf.plot_rolling_returns(returns=portfolio_returns, factor_returns=benchmark_rets, ax=ax)
+        st.pyplot(fig)
+        plt.close(fig)
     else:
         st.error("Portfolio optimization failed.")
 
@@ -128,5 +129,4 @@ if st.button("Calculate Black-Litterman Portfolio"):
 if st.session_state.portafolios_bl is not None:
     st.subheader("Optimized Portfolio Weights")
     st.dataframe(st.session_state.portafolios_bl)
-
 
