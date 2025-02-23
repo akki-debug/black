@@ -135,10 +135,32 @@ if st.button("Run Optimization"):
                               method='SLSQP', bounds=bounds, constraints=constraints)
     
     if optimized.success:
-        st.session_state.portafolios_bl = pd.DataFrame([optimized.x], columns=st.session_state.returns.columns)
+        optimized_weights = pd.DataFrame([optimized.x], columns=st.session_state.returns.columns).T
+        optimized_weights.columns = ["Weight"]
+        expected_return = np.dot(optimized.x, st.session_state.returns.mean()) * 252
+        expected_volatility = portfolio_volatility(optimized.x, st.session_state.returns.cov())
+        expected_sharpe = expected_return / expected_volatility
+        
         st.success("Optimized portfolio successfully generated!")
         st.markdown("## Optimized Portfolio Weights")
-        st.table(st.session_state.portafolios_bl.T.rename(columns={0: "Weight"}))
+        st.table(optimized_weights)
+        
+        st.markdown("### Portfolio Metrics")
+        st.write(f"**Expected Annual Return:** {expected_return:.2%}")
+        st.write(f"**Expected Volatility:** {expected_volatility:.2%}")
+        st.write(f"**Sharpe Ratio:** {expected_sharpe:.2f}")
+        
+        # Plot Efficient Frontier
+        def plot_efficient_frontier():
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.scatter(expected_volatility, expected_return, marker="*", color="r", s=200, label="Optimized Portfolio")
+            ax.set_xlabel("Volatility")
+            ax.set_ylabel("Expected Return")
+            ax.set_title("Efficient Frontier")
+            ax.legend()
+            st.pyplot(fig)
+            plt.close(fig)
+        
+        plot_efficient_frontier()
     else:
         st.error("Portfolio optimization failed.")
-
