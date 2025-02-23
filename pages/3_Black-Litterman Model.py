@@ -100,6 +100,7 @@ plt.close(fig3)
 
 # Backtesting
 st.subheader("Backtesting: Portfolio Performance")
+initial_capital = 100000  # Set initial investment amount
 if st.session_state.portafolios_bl is not None:
     weights = st.session_state.portafolios_bl.iloc[0].values
     if len(weights) != len(st.session_state.returns.columns):
@@ -108,6 +109,9 @@ if st.session_state.portafolios_bl is not None:
     
     portfolio_returns = (st.session_state.returns @ weights).cumsum()
     equal_weight_returns = (st.session_state.returns.mean(axis=1)).cumsum()
+    
+    portfolio_final_value = initial_capital * (1 + portfolio_returns.iloc[-1])
+    percentage_return = ((portfolio_final_value - initial_capital) / initial_capital) * 100
     
     fig6, ax6 = plt.subplots(figsize=(12, 6))
     sns.lineplot(x=portfolio_returns.index, y=portfolio_returns, label="Optimized Portfolio", ax=ax6)
@@ -118,10 +122,12 @@ if st.session_state.portafolios_bl is not None:
     
     st.write("Final Portfolio Performance:")
     final_returns = pd.DataFrame({
-        "Optimized Portfolio": portfolio_returns.iloc[-1],
-        "Equal Weight Portfolio": equal_weight_returns.iloc[-1]
-    }, index=["Total Return"])
+        "Initial Capital": [initial_capital],
+        "Final Portfolio Value": [portfolio_final_value],
+        "Percentage Return (%)": [percentage_return]
+    })
     st.dataframe(final_returns)
 else:
     st.warning("Optimized portfolio not found. Run optimization first.")
+
 
