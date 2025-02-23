@@ -79,7 +79,7 @@ if st.button("Run Optimization"):
 # Compute Performance Metrics
 st.subheader("Performance Metrics")
 st.markdown("### Sharpe Ratio Formula")
-st.latex(r"""Sharpe = rac{R_p - R_f}{\sigma_p} 	imes \sqrt{252}""")
+st.latex(r"""Sharpe = \frac{R_p - R_f}{\sigma_p} \times \sqrt{252}""")
 sharpe_ratio = st.session_state.returns.mean() / st.session_state.returns.std() * np.sqrt(252)
 st.dataframe(sharpe_ratio.rename("Sharpe Ratio"))
 
@@ -88,14 +88,14 @@ risk_free_rate = 0.04 / 252  # Assume 4% annual risk-free rate
 
 # Sortino Ratio
 st.markdown("### Sortino Ratio Formula")
-st.latex(r"""Sortino = rac{R_p - R_f}{\sigma_d} 	imes \sqrt{252}""")
+st.latex(r"""Sortino = \frac{R_p - R_f}{\sigma_d} \times \sqrt{252}""")
 negative_returns = st.session_state.returns[st.session_state.returns < 0].std()
 sortino_ratio = (st.session_state.returns.mean() - risk_free_rate) / negative_returns * np.sqrt(252)
 st.dataframe(sortino_ratio.rename("Sortino Ratio"))
 
 # Maximum Drawdown
 st.markdown("### Maximum Drawdown Formula")
-st.latex(r"""MaxDrawdown = rac{CumulativeReturn_{min} - CumulativeReturn_{max}}{CumulativeReturn_{max}}""")
+st.latex(r"""MaxDrawdown = \frac{CumulativeReturn_{min} - CumulativeReturn_{max}}{CumulativeReturn_{max}}""")
 cumulative_returns = (1 + st.session_state.returns).cumprod()
 rolling_max = cumulative_returns.cummax()
 drawdown = (cumulative_returns - rolling_max) / rolling_max
@@ -104,13 +104,13 @@ st.dataframe(max_drawdown.rename("Max Drawdown"))
 
 # Calmar Ratio
 st.markdown("### Calmar Ratio Formula")
-st.latex(r"""Calmar = rac{AnnualizedReturn}{|MaxDrawdown|}""")
+st.latex(r"""Calmar = \frac{AnnualizedReturn}{|MaxDrawdown|}""")
 calmar_ratio = (st.session_state.returns.mean() * 252) / abs(max_drawdown)
 st.dataframe(calmar_ratio.rename("Calmar Ratio"))
 
 # Volatility
 st.markdown("### Portfolio Volatility Formula")
-st.latex(r"""Volatility = \sigma_p 	imes \sqrt{252}""")
+st.latex(r"""Volatility = \sigma_p \times \sqrt{252}""")
 portfolio_volatility = st.session_state.returns.std() * np.sqrt(252)
 st.dataframe(portfolio_volatility.rename("Volatility"))
 
@@ -142,4 +142,5 @@ if st.session_state.portafolios_bl is not None:
     st.dataframe(final_returns)
 else:
     st.warning("Optimized portfolio not found. Run optimization first.")
+
 
