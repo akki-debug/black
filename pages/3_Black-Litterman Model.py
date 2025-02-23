@@ -15,7 +15,11 @@ st.title("Black-Litterman Model")
 if "portafolios_bl" not in st.session_state:
     st.session_state.portafolios_bl = None
 
-# Fetch stock data directly using yfinance
+# Fetch stock data
+def get_stock_data(tickers, start, end):
+    data = yf.download(tickers, start=start, end=end)["Close"].dropna()
+    return data
+
 nifty50_stocks = [
     "RELIANCE.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "TCS.NS",
     "HINDUNILVR.NS", "ITC.NS", "LT.NS", "AXISBANK.NS", "BHARTIARTL.NS"
@@ -24,10 +28,6 @@ selected_stocks = st.multiselect("Select stocks for portfolio:", nifty50_stocks,
 
 start_date = st.date_input("Start Date", value=datetime(2023, 1, 1))
 end_date = st.date_input("End Date", value=datetime(2023, 12, 31))
-
-def get_stock_data(tickers, start, end):
-    data = yf.download(tickers, start=start, end=end)["Close"].dropna()
-    return data
 
 st.session_state.data = get_stock_data(selected_stocks, start_date, end_date)
 st.session_state.returns = st.session_state.data.pct_change().dropna()
@@ -44,7 +44,6 @@ else:
 
 # Additional Visualizations
 st.markdown("## Data Visualization :bar_chart:")
-
 fig1, ax1 = plt.subplots(figsize=(12, 6))
 sns.lineplot(data=st.session_state.data, ax=ax1)
 ax1.set_title("Stock Closing Prices Over Time")
@@ -57,7 +56,7 @@ ax2.set_title("Stock Correlation Heatmap")
 st.pyplot(fig2)
 plt.close(fig2)
 
-# Portfolio Optimization Button
+# Portfolio Optimization
 st.subheader("Optimize Portfolio")
 if st.button("Run Optimization"):
     def portfolio_volatility(weights, cov_matrix):
@@ -83,7 +82,23 @@ sharpe_ratio = st.session_state.returns.mean() / st.session_state.returns.std() 
 st.write("Sharpe Ratio of Selected Stocks:")
 st.dataframe(sharpe_ratio.rename("Sharpe Ratio"))
 
-# Compute Drawdown Analysis
+# Additional Financial Metrics
+risk_free_rate = 0.04 / 252  # Assume 4% annual risk-free rate
+
+# Sortino Ratio
+negative_returns = st.session_state.returns[st.session_state.returns < 0].std()
+sortino_ratio = (st.session_state.returns.mean() - risk_free_rate) / negative_returns * np.sqrt(252)
+st.subheader("Sortino Ratio")
+st.dataframe(sortino_ratio.rename("Sortino Ratio"))
+
+# Treynor Ratio
+market_returns = yf.download("^NSEI", start=start_date, end=end_date)["Close"].pct_change().dropna()
+portfolio_beta = st.session_state.returns.cov().dot(sharpe_ratio) / market_returns.var()
+treynor_ratio = (st.session_state.returns.mean() - risk_free_rate) / portfolio_beta
+st.subheader("Treynor Ratio")
+st.dataframe(treynor_ratio.rename("Treynor Ratio"))
+
+# Maximum Drawdown
 cumulative_returns = (1 + st.session_state.returns).cumprod()
 rolling_max = cumulative_returns.cummax()
 drawdown = (cumulative_returns - rolling_max) / rolling_max
@@ -92,6 +107,17 @@ max_drawdown = drawdown.min()
 st.subheader("Maximum Drawdown")
 st.dataframe(max_drawdown.rename("Max Drawdown"))
 
+# Calmar Ratio
+calmar_ratio = (st.session_state.returns.mean() * 252) / abs(max_drawdown)
+st.subheader("Calmar Ratio")
+st.dataframe(calmar_ratio.rename("Calmar Ratio"))
+
+# Volatility
+portfolio_volatility = st.session_state.returns.std() * np.sqrt(252)
+st.subheader("Portfolio Volatility")
+st.dataframe(portfolio_volatility.rename("Volatility"))
+
+# Drawdown Chart
 fig3, ax3 = plt.subplots(figsize=(12, 6))
 sns.lineplot(data=drawdown, ax=ax3)
 ax3.set_title("Drawdown Over Time")
@@ -100,16 +126,11 @@ plt.close(fig3)
 
 # Backtesting
 st.subheader("Backtesting: Portfolio Performance")
-initial_capital = 100000  # Set initial investment amount
+initial_capital = 100000
 if st.session_state.portafolios_bl is not None:
     weights = st.session_state.portafolios_bl.iloc[0].values
-    if len(weights) != len(st.session_state.returns.columns):
-        st.error("Mismatch between portfolio weights and returns. Check asset selection.")
-        st.stop()
-    
     portfolio_returns = (st.session_state.returns @ weights).cumsum()
     equal_weight_returns = (st.session_state.returns.mean(axis=1)).cumsum()
-    
     portfolio_final_value = initial_capital * (1 + portfolio_returns.iloc[-1])
     percentage_return = ((portfolio_final_value - initial_capital) / initial_capital) * 100
     
@@ -120,14 +141,7 @@ if st.session_state.portafolios_bl is not None:
     st.pyplot(fig6)
     plt.close(fig6)
     
-    st.write("Final Portfolio Performance:")
-    final_returns = pd.DataFrame({
-        "Initial Capital": [initial_capital],
-        "Final Portfolio Value": [portfolio_final_value],
-        "Percentage Return (%)": [percentage_return]
-    })
+    final_returns = pd.DataFrame({"Initial Capital": [initial_capital], "Final Portfolio Value": [portfolio_final_value], "Percentage Return (%)": [percentage_return]})
     st.dataframe(final_returns)
 else:
     st.warning("Optimized portfolio not found. Run optimization first.")
-
-
