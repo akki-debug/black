@@ -64,11 +64,16 @@ market_weights = market_capitalization / market_capitalization.sum()
 market_returns = st.session_state.returns.mean()
 cov_matrix = st.session_state.returns.cov()
 
-# User-defined subjective views
-st.markdown("### Define Subjective Views")
+# Subjective Views on Expected Returns
+st.subheader("Subjective Views on Expected Returns")
+st.markdown("Specify your own expectations and confidence levels for selected stocks.")
 view_stock = st.selectbox("Select stock for view:", selected_stocks)
 expected_return_view = st.number_input("Expected return (%)", value=5.0) / 100
 confidence = st.slider("Confidence in view (%)", 0, 100, 50) / 100
+
+st.markdown("**Quantitative Reasoning:** The subjective view allows investors to incorporate their market insights.")
+st.markdown("**Confidence Level Tuning:** Adjust the slider to reflect how certain you are about your expectation.")
+st.markdown("**Market Awareness:** Consider external factors like economic shifts when setting expectations.")
 
 # Black-Litterman Model Computation
 if st.button("Calculate Black-Litterman Portfolio"):
@@ -100,16 +105,8 @@ if st.button("Calculate Black-Litterman Portfolio"):
     else:
         st.error("Portfolio optimization failed.")
 
-# Compute Performance Metrics
-st.subheader("Performance Metrics")
-st.markdown("### Sharpe Ratio Formula")
-st.latex(r"""Sharpe = \frac{R_p - R_f}{\sigma_p} \times \sqrt{252}""")
-sharpe_ratio = st.session_state.returns.mean() / st.session_state.returns.std() * np.sqrt(252)
-st.dataframe(sharpe_ratio.rename("Sharpe Ratio"))
-
 # Display Optimized Portfolio
 if st.session_state.portafolios_bl is not None:
     st.subheader("Optimized Portfolio Weights")
     st.dataframe(st.session_state.portafolios_bl)
-
 
