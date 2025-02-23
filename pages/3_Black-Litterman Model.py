@@ -45,15 +45,17 @@ else:
 # Additional Visualizations
 st.markdown("## Data Visualization :bar_chart:")
 
-fig1 = sns.lineplot(data=st.session_state.data)
-plt.title("Stock Closing Prices Over Time")
-st.pyplot(fig1.figure)
-plt.close()
+fig1, ax1 = plt.subplots(figsize=(12, 6))
+sns.lineplot(data=st.session_state.data, ax=ax1)
+ax1.set_title("Stock Closing Prices Over Time")
+st.pyplot(fig1)
+plt.close(fig1)
 
-fig2 = sns.heatmap(st.session_state.returns.corr(), annot=True, cmap='coolwarm', linewidths=0.5)
-plt.title("Stock Correlation Heatmap")
-st.pyplot(fig2.figure)
-plt.close()
+fig2, ax2 = plt.subplots(figsize=(10, 6))
+sns.heatmap(st.session_state.returns.corr(), annot=True, cmap='coolwarm', linewidths=0.5, ax=ax2)
+ax2.set_title("Stock Correlation Heatmap")
+st.pyplot(fig2)
+plt.close(fig2)
 
 # Compute Covariance Matrix
 st.subheader("Covariance Matrix of the Excess Annual Returns:")
@@ -122,7 +124,8 @@ if "portafolios_bl" in st.session_state and st.session_state.portafolios_bl is n
     st.subheader("Optimized Portfolio with Varying Risk Aversion Levels (λ)")
     st.dataframe(st.session_state.portafolios_bl)
     
-    fig3 = sns.barplot(data=st.session_state.portafolios_bl.drop(columns=["Total"]).T)
-    plt.title("Asset Allocation by Risk Aversion Level (λ)")
-st.pyplot(fig3.figure)
-plt.close()
+    fig3, ax3 = plt.subplots(figsize=(12, 6))
+    sns.barplot(data=st.session_state.portafolios_bl.drop(columns=["Total"]).T, ax=ax3)
+    ax3.set_title("Asset Allocation by Risk Aversion Level (λ)")
+    st.pyplot(fig3)
+    plt.close(fig3)
