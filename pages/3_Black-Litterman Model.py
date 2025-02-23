@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
 from datetime import datetime
-from scipy.linalg import inv
-import pyfolio as pf
 
 # Page Config
 st.set_page_config(page_title="Black-Litterman Model", page_icon="mag")
@@ -58,75 +56,54 @@ ax2.set_title("Stock Correlation Heatmap")
 st.pyplot(fig2)
 plt.close(fig2)
 
-# Black-Litterman Parameters
-st.subheader("Black-Litterman Model")
-market_capitalization = np.array([2.5, 1.8, 1.2, 1.5, 2.0])[:len(selected_stocks)]
-market_weights = market_capitalization / market_capitalization.sum()
-market_returns = st.session_state.returns.mean()
-cov_matrix = st.session_state.returns.cov()
+# Additional Visualizations
+fig3, ax3 = plt.subplots(figsize=(12, 6))
+sns.histplot(st.session_state.returns, bins=30, kde=True, ax=ax3)
+ax3.set_title("Histogram of Daily Returns")
+st.pyplot(fig3)
+plt.close(fig3)
 
-# Subjective Views on Expected Returns
-st.subheader("Subjective Views on Expected Returns")
-st.markdown("Specify your own expectations and confidence levels for selected stocks.")
-view_stock = st.selectbox("Select stock for view:", selected_stocks)
-expected_return_view = st.number_input("Expected return (%)", value=5.0) / 100
-confidence = st.slider("Confidence in view (%)", 0, 100, 50) / 100
+fig4, ax4 = plt.subplots(figsize=(12, 6))
+st.session_state.returns.cumsum().plot(ax=ax4)
+ax4.set_title("Cumulative Returns of Selected Stocks")
+st.pyplot(fig4)
+plt.close(fig4)
 
-st.markdown("**Quantitative Reasoning:** The subjective view allows investors to incorporate their market insights.")
-st.markdown("**Confidence Level Tuning:** Adjust the slider to reflect how certain you are about your expectation.")
-st.markdown("**Market Awareness:** Consider external factors like economic shifts when setting expectations.")
+fig5, ax5 = plt.subplots(figsize=(12, 6))
+sns.boxplot(data=st.session_state.returns, ax=ax5)
+ax5.set_title("Boxplot of Stock Returns")
+st.pyplot(fig5)
+plt.close(fig5)
 
-# Black-Litterman Model Computation
-if st.button("Calculate Black-Litterman Portfolio"):
-    tau = 0.05  # Scaling factor for covariance uncertainty
-    P = np.zeros((1, len(selected_stocks)))
-    P[0, selected_stocks.index(view_stock)] = 1
-    Q = np.array([expected_return_view])
-    Omega = np.diag(np.full(1, confidence * cov_matrix.to_numpy().trace() / len(selected_stocks)))
-    
-    # Compute Black-Litterman expected returns
-    inv_term = inv(inv(tau * cov_matrix.to_numpy()) + P.T @ inv(Omega) @ P)
-    adjusted_returns = inv_term @ (inv(tau * cov_matrix.to_numpy()) @ market_returns.to_numpy() + P.T @ inv(Omega) @ Q)
-    
-    # Optimize portfolio based on Black-Litterman returns
+fig6, ax6 = plt.subplots(figsize=(12, 6))
+st.session_state.returns.rolling(window=30).std().plot(ax=ax6)
+ax6.set_title("Rolling Volatility of Selected Stocks")
+st.pyplot(fig6)
+plt.close(fig6)
+
+fig7, ax7 = plt.subplots(figsize=(12, 6))
+sns.pairplot(st.session_state.returns)
+st.pyplot(fig7)
+plt.close(fig7)
+
+# Portfolio Optimization
+st.subheader("Optimize Portfolio")
+if st.button("Run Optimization"):
     def portfolio_volatility(weights, cov_matrix):
         return np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
     
-    num_assets = len(selected_stocks)
+    num_assets = len(st.session_state.returns.columns)
     initial_weights = np.ones(num_assets) / num_assets
-    bounds = tuple((0, 1) for _ in range(num_assets))
+    bounds = tuple((0, 1) for asset in range(num_assets))
     constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
     
-    optimized = sco.minimize(portfolio_volatility, initial_weights, args=(cov_matrix),
+    optimized = sco.minimize(portfolio_volatility, initial_weights, args=(st.session_state.returns.cov()),
                               method='SLSQP', bounds=bounds, constraints=constraints)
     
     if optimized.success:
-        st.session_state.portafolios_bl = pd.DataFrame([optimized.x], columns=selected_stocks)
-        st.success("Optimized Black-Litterman portfolio successfully generated!")
-        
-        # Compute portfolio returns
-        portfolio_returns = (st.session_state.returns @ optimized.x)
-        
-        # Generate Performance Statistics
-        st.subheader("Performance Statistics")
-        perf_stats = pf.timeseries.perf_stats(portfolio_returns)
-        st.dataframe(perf_stats)
-        
-        # Generate Comparison with Benchmark (S&P BSE-SENSEX)
-        benchmark = '^BSESN'
-        benchmark_rets = yf.download(benchmark, start=start_date, end=end_date)['Adj Close'].pct_change().dropna()
-        benchmark_rets = benchmark_rets.filter(portfolio_returns.index)
-        benchmark_rets.name = "S&P BSE-SENSEX"
-        
-        fig, ax = plt.subplots(figsize=(14, 8))
-        pf.plot_rolling_returns(returns=portfolio_returns, factor_returns=benchmark_rets, ax=ax)
-        st.pyplot(fig)
-        plt.close(fig)
+        st.session_state.portafolios_bl = pd.DataFrame([optimized.x], columns=st.session_state.returns.columns)
+        st.success("Optimized portfolio successfully generated!")
     else:
         st.error("Portfolio optimization failed.")
 
-# Display Optimized Portfolio
-if st.session_state.portafolios_bl is not None:
-    st.subheader("Optimized Portfolio Weights")
-    st.dataframe(st.session_state.portafolios_bl)
 
