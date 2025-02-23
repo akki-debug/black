@@ -64,7 +64,8 @@ def portfolio_stats(weights, returns, return_df=False):
     port_rets = np.dot(weights, returns.mean() * 252)
     port_vols = np.sqrt(np.dot(weights.T, np.dot(returns.cov() * 252, weights)))
     sharpe_ratio = port_rets / port_vols
-    max_drawdown = ((returns.cumsum() - returns.cumsum().max()) / returns.cumsum().max()).min()
+    cumulative_returns = (1 + returns).cumprod()
+    max_drawdown = (cumulative_returns / cumulative_returns.cummax() - 1).min().min()
     resultados = np.array([port_rets, port_vols, sharpe_ratio, max_drawdown])
     
     if return_df:
