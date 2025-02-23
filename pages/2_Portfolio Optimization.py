@@ -60,12 +60,12 @@ fig2 = px.imshow(st.session_state.returns.corr(), text_auto=True, title="Stock C
 st.plotly_chart(fig2)
 
 def portfolio_stats(weights, returns, return_df=False):
-    weights = np.array(weights)[:, np.newaxis]
-    port_rets = weights.T @ np.array(returns.mean() * 252)[:, np.newaxis]
-    port_vols = np.sqrt(multi_dot([weights.T, returns.cov() * 252, weights]))
+    weights = np.array(weights).flatten()
+    port_rets = np.dot(weights, returns.mean() * 252)
+    port_vols = np.sqrt(np.dot(weights.T, np.dot(returns.cov() * 252, weights)))
     sharpe_ratio = port_rets / port_vols
-    max_drawdown = (returns.cumsum().min() - returns.cumsum().max()) / returns.cumsum().max()
-    resultados = np.array([port_rets, port_vols, sharpe_ratio, max_drawdown]).flatten()
+    max_drawdown = ((returns.cumsum() - returns.cumsum().max()) / returns.cumsum().max()).min()
+    resultados = np.array([port_rets, port_vols, sharpe_ratio, max_drawdown])
     
     if return_df:
         return pd.DataFrame(data=np.round(resultados, 4), index=["Returns", "Volatility", "Sharpe Ratio", "Max Drawdown"], columns=["Resultado"])
@@ -81,7 +81,7 @@ def min_vol_opt(returns):
     cons = ({'type': 'eq', 'fun': lambda x: sum(x) - 1})
     bnds = tuple((0, 1) for x in range(len(returns.columns)))
     initial_wts = np.ones(len(returns.columns)) / len(returns.columns)  # Ensure valid initial weights
-    opt_vol = sco.minimize(fun=get_volatility, x0=initial_wts, args=(returns), method='SLSQP', bounds=bnds, constraints=cons)
+    opt_vol = sco.minimize(fun=get_volatility, x0=initial_wts, args=(returns,), method='SLSQP', bounds=bnds, constraints=cons)
     
     if not opt_vol.success:
         raise ValueError(f"Optimization failed: {opt_vol.message}")
