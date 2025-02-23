@@ -8,24 +8,35 @@ import scipy.optimize as sco
 from numpy.linalg import multi_dot
 from datetime import datetime
 
-# Link to Financial Data Download
-st.session_state.data = st.session_state.get("data", None)
-st.session_state.returns = st.session_state.get("returns", None)
-st.session_state.start_date = st.session_state.get("start_date", None)
-st.session_state.end_date = st.session_state.get("end_date", None)
-
 # Page Config
 st.set_page_config(page_title="Portfolio Optimization", page_icon="mag")
 st.title("Portfolio Optimization & Backtesting")
 
+# Fetch stock data directly using yfinance
+nifty50_stocks = [
+    "RELIANCE.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "TCS.NS",
+    "HINDUNILVR.NS", "ITC.NS", "LT.NS", "AXISBANK.NS", "BHARTIARTL.NS"
+]
+selected_stocks = st.multiselect("Select stocks for portfolio:", nifty50_stocks, default=nifty50_stocks[:5])
+
+start_date = st.date_input("Start Date", value=datetime(2023, 1, 1))
+end_date = st.date_input("End Date", value=datetime(2023, 12, 31))
+
+def get_stock_data(tickers, start, end):
+    data = yf.download(tickers, start=start, end=end)["Close"].dropna()
+    return data
+
+st.session_state.data = get_stock_data(selected_stocks, start_date, end_date)
+st.session_state.returns = st.session_state.data.pct_change().dropna()
+
 if st.session_state.data is not None and st.session_state.returns is not None:
-    st.success("Session data successfully loaded from Financial Data Download.")
+    st.success("Stock data successfully fetched.")
     st.write("Closing prices:")
     st.dataframe(st.session_state.data.tail())
     st.write("Daily returns:")
     st.dataframe(st.session_state.returns.tail())
 else:
-    st.warning("No data available. Please return to the Financial Data Download page to load the required data.")
+    st.warning("No data available. Please select valid tickers and date range.")
     st.stop()
 
 def portfolio_stats(weights, returns, return_df=False):
@@ -41,18 +52,6 @@ def portfolio_stats(weights, returns, return_df=False):
         return resultados
 
 st.markdown("## Optimization :muscle:")
-
-opt_range = st.slider("Select a date range:", min_value=st.session_state.start_date, max_value=st.session_state.end_date, value=(st.session_state.start_date, st.session_state.end_date), format="YYYY-MM-DD")
-st.session_state.start_date_opt, st.session_state.end_date_opt = opt_range
-
-st.write("Start:", st.session_state.start_date_opt)
-st.write("End:", st.session_state.end_date_opt)
-
-if "returns1" not in st.session_state:
-    st.session_state.returns1 = None
-
-if st.session_state.returns is not None:
-    st.session_state.returns1 = st.session_state.returns.loc[st.session_state.start_date_opt:st.session_state.end_date_opt]
 
 def get_volatility(weights, returns):
     return portfolio_stats(weights, returns)[1]
@@ -71,9 +70,9 @@ if "min_vol_resultados" not in st.session_state:
     st.session_state.min_vol_resultados = None
 
 if st.button("Go!"):
-    if st.session_state.returns1 is not None:
+    if st.session_state.returns is not None:
         try:
-            st.session_state.min_vol_resultados = min_vol_opt(st.session_state.returns1)
+            st.session_state.min_vol_resultados = min_vol_opt(st.session_state.returns)
             st.success("Minimum Volatility Portfolio successfully optimized!")
         except:
             st.warning("An error occurred while optimizing the Minimum Volatility Portfolio.")
