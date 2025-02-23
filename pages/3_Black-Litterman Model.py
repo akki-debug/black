@@ -42,6 +42,28 @@ else:
     st.warning("No data available. Please select valid tickers and date range.")
     st.stop()
 
+# Performance Statistics
+def calculate_performance(returns):
+    annual_return = returns.mean() * 252
+    annual_volatility = returns.std() * np.sqrt(252)
+    sharpe_ratio = annual_return / annual_volatility
+    max_drawdown = (returns.cumsum().expanding().max() - returns.cumsum()).min()
+    return annual_return, annual_volatility, sharpe_ratio, max_drawdown
+
+strategy_stats = calculate_performance(st.session_state.returns.mean(axis=1))
+benchmark_ticker = "^NSEI"  # Nifty 50 Index
+benchmark_data = get_stock_data([benchmark_ticker], start_date, end_date).pct_change().dropna()
+benchmark_stats = calculate_performance(benchmark_data[benchmark_ticker])
+
+stats_df = pd.DataFrame({
+    "Metric": ["Annual Return", "Annual Volatility", "Sharpe Ratio", "Max Drawdown"],
+    "Strategy": strategy_stats,
+    "Benchmark": benchmark_stats
+})
+
+st.markdown("## Performance Statistics")
+st.dataframe(stats_df)
+
 # Additional Visualizations
 st.markdown("## Data Visualization :bar_chart:")
 fig1, ax1 = plt.subplots(figsize=(12, 6))
@@ -56,7 +78,6 @@ ax2.set_title("Stock Correlation Heatmap")
 st.pyplot(fig2)
 plt.close(fig2)
 
-# Additional Visualizations
 fig3, ax3 = plt.subplots(figsize=(12, 6))
 sns.histplot(st.session_state.returns, bins=30, kde=True, ax=ax3)
 ax3.set_title("Histogram of Daily Returns")
@@ -80,11 +101,6 @@ st.session_state.returns.rolling(window=30).std().plot(ax=ax6)
 ax6.set_title("Rolling Volatility of Selected Stocks")
 st.pyplot(fig6)
 plt.close(fig6)
-
-fig7, ax7 = plt.subplots(figsize=(12, 6))
-sns.pairplot(st.session_state.returns)
-st.pyplot(fig7)
-plt.close(fig7)
 
 # Portfolio Optimization
 st.subheader("Optimize Portfolio")
