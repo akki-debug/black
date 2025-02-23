@@ -1,114 +1,107 @@
 import pandas as pd
 import numpy as np
-from numpy.linalg import multi_dot
 import yfinance as yf
-import scipy as stats
-from scipy.stats import kurtosis, skew, norm
 import matplotlib.pyplot as plt
-import datetime as dt
 import seaborn as sns
 import streamlit as st
-from fredapi import Fred
-import requests
-import plotly.graph_objects as go
+from datetime import datetime
 
-sns.set(style="whitegrid")
-plt.rcParams['figure.figsize'] = [12, 8]
-plt.rcParams['axes.titlesize'] = 18
-plt.rcParams['axes.labelsize'] = 14
-plt.rcParams['legend.fontsize'] = 12
-plt.rcParams['xtick.labelsize'] = 12
-plt.rcParams['ytick.labelsize'] = 12
+# Page Config
+st.set_page_config(page_title="NIFTY 50 Stock Dashboard", page_icon="📈", layout="wide")
 
-st.set_page_config(
-    page_title="Financial Data Download",
-    page_icon="mag"
-)
-st.title("Financial Data Download")
-st.markdown("## Data Download & Currency Conversion :currency_exchange:")
+# Custom CSS for styling
+st.markdown("""
+    <style>
+        .stApp {
+            background-color: #f4f4f4;
+        }
+        .main-title {
+            text-align: center;
+            font-size: 2.5rem;
+            color: #1f77b4;
+            font-weight: bold;
+        }
+        .sub-title {
+            font-size: 1.5rem;
+            color: #ff5733;
+            font-weight: bold;
+        }
+        .stat-card {
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-# Nifty 50 tickers
-nifty_50_tickers = [
-    "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS", "HINDUNILVR.NS", "SBIN.NS", "HDFC.NS", "BHARTIARTL.NS", "ITC.NS",
-    "KOTAKBANK.NS", "LT.NS", "AXISBANK.NS", "ASIANPAINT.NS", "BAJFINANCE.NS", "MARUTI.NS", "SUNPHARMA.NS", "HCLTECH.NS", "TITAN.NS", "ULTRACEMCO.NS",
-    "WIPRO.NS", "NESTLEIND.NS", "INDUSINDBK.NS", "POWERGRID.NS", "TATASTEEL.NS", "TECHM.NS", "ADANIENT.NS", "ONGC.NS", "JSWSTEEL.NS", "CIPLA.NS",
-    "NTPC.NS", "BAJAJFINSV.NS", "DRREDDY.NS", "TATAMOTORS.NS", "HEROMOTOCO.NS", "GRASIM.NS", "BPCL.NS", "COALINDIA.NS", "DIVISLAB.NS", "HINDALCO.NS",
-    "EICHERMOT.NS", "BAJAJ-AUTO.NS", "APOLLOHOSP.NS", "BRITANNIA.NS", "SBILIFE.NS", "UPL.NS", "ADANIPORTS.NS", "M&M.NS", "IOC.NS", "SHREECEM.NS"
+# Title and header
+st.markdown('<h1 class="main-title">📈 NIFTY 50 Stock Dashboard</h1>', unsafe_allow_html=True)
+st.markdown('<p class="sub-title">Real-time Stock Market Analysis</p>', unsafe_allow_html=True)
+
+# Sidebar for selections
+st.sidebar.header("⚙️ Settings")
+
+# Stock Selection
+nifty50_stocks = [
+    "RELIANCE.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "TCS.NS",
+    "HINDUNILVR.NS", "ITC.NS", "LT.NS", "AXISBANK.NS", "BHARTIARTL.NS"
 ]
+selected_stock = st.sidebar.selectbox("🔍 Select a Stock", nifty50_stocks)
 
-# Function to fetch stock data
-def get_asset_data(tickers, start_date, end_date):
-    temp_data = yf.download(tickers, start=start_date, end=end_date)["Close"].dropna()
-    temp_data = temp_data.reset_index()
-    temp_data['Date'] = pd.to_datetime(temp_data['Date']).dt.date
-    temp_data = temp_data.set_index('Date')
-    return temp_data
+# Date Selection
+start_date = st.sidebar.date_input("📅 Start Date", value=pd.to_datetime("2023-01-01"))
+end_date = st.sidebar.date_input("📅 End Date", value=pd.to_datetime("2023-12-31"))
 
-# Currency conversion function
-def convert_to_currency(data, start_date, end_date, target_currency="MXN"):
-    conversion_rates = {}
-    for ticker in data.columns:
-        symbol = yf.Ticker(ticker)
-        currency = symbol.info.get("currency", "USD")
-        if currency != target_currency:
-            fx_pair = f"{currency}{target_currency}=X"
-            if fx_pair not in conversion_rates:
-                fx_data = pd.DataFrame(get_asset_data(fx_pair, start_date, end_date)).rename(
-                    columns={"Close": fx_pair})
-                conversion_rates[fx_pair] = fx_data
-            data[ticker] = data[ticker] * conversion_rates[fx_pair][fx_pair]
-            data = data.ffill()
-    return data
+# Convert dates
+start_date_str, end_date_str = start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')
 
-st.session_state.get_asset_data = get_asset_data
-st.session_state.convert_to_currency = convert_to_currency
+# Fetch stock data
+try:
+    stock_data = yf.Ticker(selected_stock)
+    hist = stock_data.history(start=start_date_str, end=end_date_str)
 
-# User input for tickers
-symbols_option = st.radio("Choose stock selection method:", ("Manual Entry", "Nifty 50"))
+    # Display stock info
+    st.markdown(f"### 📊 Basic Information - {selected_stock}")
+    with st.expander("🔍 View Stock Details"):
+        st.write(stock_data.info)
 
-if symbols_option == "Manual Entry":
-    symbols_input = st.text_input(
-        "Enter the tickers separated by commas:",
-        placeholder="Example: AAPL, MSFT, GOOGL, TSLA"
-    ).upper()
-    symbols = [ticker.strip() for ticker in symbols_input.split(",") if ticker.strip()]
-else:
-    symbols = nifty_50_tickers
-    st.success("Nifty 50 tickers selected!")
+    # Price & Volume Charts
+    st.markdown("### 📈 Stock Performance")
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
 
-# Date selection
-st.session_state.start_date = st.date_input("Enter the start date:", value=dt.date(2010, 1, 1))
-st.session_state.end_date = st.date_input("Enter the end date:")
+    # Price Chart
+    sns.lineplot(x=hist.index, y=hist["Close"], ax=ax1, color="blue", linewidth=2.5)
+    ax1.set_title("Stock Closing Price", fontsize=14)
+    ax1.set_xlabel("Date")
+    ax1.set_ylabel("Price (₹)")
+    ax1.grid(True)
 
-# Currency selection
-currency_options = ["USD", "MXN", "EUR", "JPY", "GBP", "CAD", "AUD"]
-st.session_state.target_currency = st.selectbox("Select the target currency:", currency_options)
+    # Volume Chart
+    sns.barplot(x=hist.index, y=hist["Volume"], ax=ax2, color="orange", alpha=0.7)
+    ax2.set_title("Trading Volume", fontsize=14)
+    ax2.set_xlabel("Date")
+    ax2.set_ylabel("Volume")
+    ax2.grid(True)
 
-# Fetching data
-if st.button("Get data!"):
-    if not symbols:
-        st.warning("No tickers detected. Please provide tickers or select Nifty 50.")
-    elif st.session_state.start_date >= st.session_state.end_date:
-        st.error("Invalid date range. Please ensure the start date is earlier than the end date.")
-    else:
-        try:
-            st.session_state.data = get_asset_data(
-                symbols,
-                start_date=st.session_state.start_date,
-                end_date=st.session_state.end_date
-            )
-            if len(st.session_state.data) == 0:
-                st.warning("No data found for the provided tickers.")
-            else:
-                st.session_state.data = convert_to_currency(
-                    st.session_state.data,
-                    start_date=st.session_state.start_date,
-                    end_date=st.session_state.end_date,
-                    target_currency=st.session_state.target_currency
-                )
-                st.success(f"Data downloaded and converted to {st.session_state.target_currency}.")
-        except Exception as e:
-            st.error(f"An error occurred during processing: {e}")
+    st.pyplot(fig)
 
-if st.session_state.data is not None and len(st.session_state.data) > 0:
-    st.dataframe(st.session_state.data.tail())
+    # Stock Statistics
+    st.markdown("### 📌 Key Statistics")
+    stats = {
+        "📍 Current Price": round(hist["Close"][-1], 2),
+        "📊 Daily Return (%)": round(hist["Close"].pct_change().dropna().mean() * 100, 2),
+        "📉 Volatility (%)": round(hist["Close"].pct_change().dropna().std() * np.sqrt(252) * 100, 2),
+        "📈 52-Week High": round(hist["High"].max(), 2),
+        "📉 52-Week Low": round(hist["Low"].min(), 2),
+    }
+
+    # Display in columns
+    col1, col2, col3 = st.columns(3)
+    col4, col5 = st.columns(2)
+
+    for col, (stat, value) in zip([col1, col2, col3, col4, col5], stats.items()):
+        col.markdown(f'<div class="stat-card"><b>{stat}</b>: {value}</div>', unsafe_allow_html=True)
+
+except Exception as e:
+    st.error(f"🚨 Error fetching data: {str(e)}")
