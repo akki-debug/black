@@ -40,6 +40,16 @@ else:
     st.warning("No data available. Please select valid tickers and date range.")
     st.stop()
 
+# Check for NaN or Infinite Values
+if st.session_state.returns.isnull().values.any() or np.isinf(st.session_state.returns.values).any():
+    st.error("❌ Data contains NaN or infinite values. Please adjust the date range or stock selection.")
+    st.stop()
+
+# Ensure Enough Data Points for Optimization
+if len(st.session_state.returns) < len(st.session_state.returns.columns):
+    st.error("❌ Not enough data points for optimization. Try a longer date range.")
+    st.stop()
+
 # Additional Visualizations
 st.markdown("## Data Visualization :bar_chart:")
 
@@ -70,8 +80,12 @@ def get_volatility(weights, returns):
 def min_vol_opt(returns):
     cons = ({'type': 'eq', 'fun': lambda x: sum(x) - 1})
     bnds = tuple((0, 1) for x in range(len(returns.columns)))
-    initial_wts = np.array(len(returns.columns) * [1. / len(returns.columns)])
+    initial_wts = np.ones(len(returns.columns)) / len(returns.columns)  # Ensure valid initial weights
     opt_vol = sco.minimize(fun=get_volatility, x0=initial_wts, args=(returns), method='SLSQP', bounds=bnds, constraints=cons)
+    
+    if not opt_vol.success:
+        raise ValueError(f"Optimization failed: {opt_vol.message}")
+    
     min_vol_pesos = pd.DataFrame(data=np.around(opt_vol['x'] * 100, 2), index=returns.columns, columns=["Min_Vol"])
     min_vol_stats = portfolio_stats(opt_vol['x'], returns, return_df=True)
     min_vol_stats = min_vol_stats.rename(columns={"Resultado": "Min_Vol"})
@@ -85,8 +99,8 @@ if st.button("Go!"):
         try:
             st.session_state.min_vol_resultados = min_vol_opt(st.session_state.returns)
             st.success("Minimum Volatility Portfolio successfully optimized!")
-        except:
-            st.warning("An error occurred while optimizing the Minimum Volatility Portfolio.")
+        except Exception as e:
+            st.error(f"⚠️ Optimization failed: {e}")
 
 if st.session_state.min_vol_resultados is not None:
     st.subheader("Minimum Volatility Portfolio")
