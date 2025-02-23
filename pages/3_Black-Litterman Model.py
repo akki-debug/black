@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
 from datetime import datetime
+from scipy.linalg import inv
 
 # Page Config
 st.set_page_config(page_title="Black-Litterman Model", page_icon="mag")
@@ -56,23 +57,46 @@ ax2.set_title("Stock Correlation Heatmap")
 st.pyplot(fig2)
 plt.close(fig2)
 
-# Portfolio Optimization
-st.subheader("Optimize Portfolio")
-if st.button("Run Optimization"):
+# Black-Litterman Parameters
+st.subheader("Black-Litterman Model")
+market_capitalization = np.array([2.5, 1.8, 1.2, 1.5, 2.0])[:len(selected_stocks)]
+market_weights = market_capitalization / market_capitalization.sum()
+market_returns = st.session_state.returns.mean()
+cov_matrix = st.session_state.returns.cov()
+
+# User-defined subjective views
+st.markdown("### Define Subjective Views")
+view_stock = st.selectbox("Select stock for view:", selected_stocks)
+expected_return_view = st.number_input("Expected return (%)", value=5.0) / 100
+confidence = st.slider("Confidence in view (%)", 0, 100, 50) / 100
+
+# Black-Litterman Model Computation
+if st.button("Calculate Black-Litterman Portfolio"):
+    tau = 0.05  # Scaling factor for covariance uncertainty
+    P = np.zeros((1, len(selected_stocks)))
+    P[0, selected_stocks.index(view_stock)] = 1
+    Q = np.array([expected_return_view])
+    Omega = np.diag(np.full(1, confidence * cov_matrix.to_numpy().trace() / len(selected_stocks)))
+    
+    # Compute Black-Litterman expected returns
+    inv_term = inv(inv(tau * cov_matrix.to_numpy()) + P.T @ inv(Omega) @ P)
+    adjusted_returns = inv_term @ (inv(tau * cov_matrix.to_numpy()) @ market_returns.to_numpy() + P.T @ inv(Omega) @ Q)
+    
+    # Optimize portfolio based on Black-Litterman returns
     def portfolio_volatility(weights, cov_matrix):
         return np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
     
-    num_assets = len(st.session_state.returns.columns)
+    num_assets = len(selected_stocks)
     initial_weights = np.ones(num_assets) / num_assets
-    bounds = tuple((0, 1) for asset in range(num_assets))
+    bounds = tuple((0, 1) for _ in range(num_assets))
     constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
     
-    optimized = sco.minimize(portfolio_volatility, initial_weights, args=(st.session_state.returns.cov()),
+    optimized = sco.minimize(portfolio_volatility, initial_weights, args=(cov_matrix),
                               method='SLSQP', bounds=bounds, constraints=constraints)
     
     if optimized.success:
-        st.session_state.portafolios_bl = pd.DataFrame([optimized.x], columns=st.session_state.returns.columns)
-        st.success("Optimized portfolio successfully generated!")
+        st.session_state.portafolios_bl = pd.DataFrame([optimized.x], columns=selected_stocks)
+        st.success("Optimized Black-Litterman portfolio successfully generated!")
     else:
         st.error("Portfolio optimization failed.")
 
@@ -83,47 +107,9 @@ st.latex(r"""Sharpe = \frac{R_p - R_f}{\sigma_p} \times \sqrt{252}""")
 sharpe_ratio = st.session_state.returns.mean() / st.session_state.returns.std() * np.sqrt(252)
 st.dataframe(sharpe_ratio.rename("Sharpe Ratio"))
 
-# Additional Financial Metrics
-risk_free_rate = 0.04 / 252  # Assume 4% annual risk-free rate
-
-# Sortino Ratio
-st.markdown("### Sortino Ratio Formula")
-st.latex(r"""Sortino = \frac{R_p - R_f}{\sigma_d} \times \sqrt{252}""")
-negative_returns = st.session_state.returns[st.session_state.returns < 0].std()
-sortino_ratio = (st.session_state.returns.mean() - risk_free_rate) / negative_returns * np.sqrt(252)
-st.dataframe(sortino_ratio.rename("Sortino Ratio"))
-
-# Maximum Drawdown & Additional Metrics
-st.markdown("### Maximum Drawdown Formula")
-st.latex(r"""MaxDrawdown = \frac{CumulativeReturn_{min} - CumulativeReturn_{max}}{CumulativeReturn_{max}}""")
-cumulative_returns = (1 + st.session_state.returns).cumprod()
-rolling_max = cumulative_returns.cummax()
-drawdown = (cumulative_returns - rolling_max) / rolling_max
-max_drawdown = drawdown.min()
-st.dataframe(max_drawdown.rename("Max Drawdown"))
-
-# Annualized Return
-annualized_return = (1 + st.session_state.returns.mean()) ** 252 - 1
-st.markdown("### Annualized Return")
-st.dataframe(annualized_return.rename("Annualized Return"))
-
-# Final Portfolio Evaluation
-st.subheader("Portfolio Performance Summary")
-initial_capital = 100000  # Define initial capital
+# Display Optimized Portfolio
 if st.session_state.portafolios_bl is not None:
-    weights = st.session_state.portafolios_bl.iloc[0].values
-    portfolio_returns = (st.session_state.returns @ weights).cumsum()
-    portfolio_final_value = initial_capital * (1 + portfolio_returns.iloc[-1])
-    percentage_return = ((portfolio_final_value - initial_capital) / initial_capital) * 100
+    st.subheader("Optimized Portfolio Weights")
+    st.dataframe(st.session_state.portafolios_bl)
 
-    final_returns = pd.DataFrame({
-        "Initial Capital": [initial_capital],
-        "Final Portfolio Value": [portfolio_final_value],
-        "Percentage Return (%)": [percentage_return],
-        "Annualized Return (%)": [annualized_return.mean() * 100],
-        "Max Drawdown (%)": [max_drawdown.mean() * 100]
-    })
-    st.dataframe(final_returns.style.format({"Percentage Return (%)": "{:.2f}", "Annualized Return (%)": "{:.2f}", "Max Drawdown (%)": "{:.2f}"}))
-else:
-    st.warning("Optimized portfolio not found. Run optimization first.")
 
