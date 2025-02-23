@@ -7,6 +7,7 @@ import streamlit as st
 import scipy.optimize as sco
 from numpy.linalg import multi_dot
 from datetime import datetime
+import plotly.express as px
 
 # Page Config
 st.set_page_config(page_title="Portfolio Optimization", page_icon="mag")
@@ -39,15 +40,25 @@ else:
     st.warning("No data available. Please select valid tickers and date range.")
     st.stop()
 
+# Additional Visualizations
+st.markdown("## Data Visualization :bar_chart:")
+
+fig1 = px.line(st.session_state.data, title="Stock Closing Prices Over Time")
+st.plotly_chart(fig1)
+
+fig2 = px.imshow(st.session_state.returns.corr(), text_auto=True, title="Stock Correlation Heatmap", color_continuous_scale='viridis')
+st.plotly_chart(fig2)
+
 def portfolio_stats(weights, returns, return_df=False):
     weights = np.array(weights)[:, np.newaxis]
     port_rets = weights.T @ np.array(returns.mean() * 252)[:, np.newaxis]
     port_vols = np.sqrt(multi_dot([weights.T, returns.cov() * 252, weights]))
     sharpe_ratio = port_rets / port_vols
-    resultados = np.array([port_rets, port_vols, sharpe_ratio]).flatten()
+    max_drawdown = (returns.cumsum().min() - returns.cumsum().max()) / returns.cumsum().max()
+    resultados = np.array([port_rets, port_vols, sharpe_ratio, max_drawdown]).flatten()
     
     if return_df:
-        return pd.DataFrame(data=np.round(resultados, 4), index=["Returns", "Volatility", "Sharpe_Ratio"], columns=["Resultado"])
+        return pd.DataFrame(data=np.round(resultados, 4), index=["Returns", "Volatility", "Sharpe Ratio", "Max Drawdown"], columns=["Resultado"])
     else:
         return resultados
 
@@ -83,3 +94,9 @@ if st.session_state.min_vol_resultados is not None:
     st.dataframe(st.session_state.min_vol_resultados["min_vol_pesos"])
     st.markdown("Stats: :money_with_wings:")
     st.dataframe(st.session_state.min_vol_resultados["min_vol_stats"])
+    
+    fig3 = px.pie(st.session_state.min_vol_resultados["min_vol_pesos"], values="Min_Vol", names=st.session_state.min_vol_resultados["min_vol_pesos"].index, title="Portfolio Composition")
+    st.plotly_chart(fig3)
+    
+    fig4 = px.line(st.session_state.returns.cumsum(), title="Cumulative Returns Over Time")
+    st.plotly_chart(fig4)
