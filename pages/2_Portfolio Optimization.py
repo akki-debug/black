@@ -8,18 +8,24 @@ import scipy.optimize as sco
 from numpy.linalg import multi_dot
 from datetime import datetime
 
+# Link to Financial Data Download
+st.session_state.data = st.session_state.get("data", None)
+st.session_state.returns = st.session_state.get("returns", None)
+st.session_state.start_date = st.session_state.get("start_date", None)
+st.session_state.end_date = st.session_state.get("end_date", None)
+
 # Page Config
 st.set_page_config(page_title="Portfolio Optimization", page_icon="mag")
 st.title("Portfolio Optimization & Backtesting")
 
-if ("data" in st.session_state and st.session_state.data is not None) and ("returns" in st.session_state and st.session_state.returns is not None):
-    st.success("Session data successfully loaded.")
+if st.session_state.data is not None and st.session_state.returns is not None:
+    st.success("Session data successfully loaded from Financial Data Download.")
     st.write("Closing prices:")
     st.dataframe(st.session_state.data.tail())
     st.write("Daily returns:")
     st.dataframe(st.session_state.returns.tail())
 else:
-    st.warning("No data available. Please return to the main page to load the required data.")
+    st.warning("No data available. Please return to the Financial Data Download page to load the required data.")
     st.stop()
 
 def portfolio_stats(weights, returns, return_df=False):
