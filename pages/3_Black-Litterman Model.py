@@ -102,6 +102,25 @@ if st.button("Calculate Black-Litterman Portfolio"):
     if optimized.success:
         st.session_state.portafolios_bl = pd.DataFrame([optimized.x], columns=selected_stocks)
         st.success("Optimized Black-Litterman portfolio successfully generated!")
+        
+        # Compute portfolio returns
+        portfolio_returns = (st.session_state.returns @ optimized.x).cumsum()
+        
+        # Visualization
+        st.subheader("Portfolio Performance")
+        fig3, ax3 = plt.subplots(figsize=(12, 6))
+        sns.lineplot(data=portfolio_returns, ax=ax3)
+        ax3.set_title("Cumulative Portfolio Returns")
+        st.pyplot(fig3)
+        plt.close(fig3)
+        
+        # Risk Metrics
+        max_drawdown = (portfolio_returns - portfolio_returns.cummax()).min()
+        sharpe_ratio = (portfolio_returns.mean() / portfolio_returns.std()) * np.sqrt(252)
+        
+        st.markdown("## Portfolio Performance Metrics")
+        metrics = pd.DataFrame({"Sharpe Ratio": [sharpe_ratio], "Max Drawdown": [max_drawdown]})
+        st.dataframe(metrics)
     else:
         st.error("Portfolio optimization failed.")
 
@@ -109,4 +128,5 @@ if st.button("Calculate Black-Litterman Portfolio"):
 if st.session_state.portafolios_bl is not None:
     st.subheader("Optimized Portfolio Weights")
     st.dataframe(st.session_state.portafolios_bl)
+
 
