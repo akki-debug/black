@@ -43,12 +43,21 @@ else:
     st.stop()
 
 # Performance Statistics
+
 def calculate_performance(returns):
     annual_return = returns.mean() * 252
     annual_volatility = returns.std() * np.sqrt(252)
     sharpe_ratio = annual_return / annual_volatility
     max_drawdown = (returns.cumsum().expanding().max() - returns.cumsum()).min()
-    return annual_return, annual_volatility, sharpe_ratio, max_drawdown
+    stability = returns.autocorr()
+    omega_ratio = (returns[returns > 0].sum() / -returns[returns < 0].sum())
+    sortino_ratio = annual_return / returns[returns < 0].std()
+    skewness = returns.skew()
+    kurtosis = returns.kurtosis()
+    tail_ratio = returns.quantile(0.95) / abs(returns.quantile(0.05))
+    daily_var = returns.quantile(0.05)
+    return [annual_return, annual_volatility, sharpe_ratio, max_drawdown, stability, 
+            omega_ratio, sortino_ratio, skewness, kurtosis, tail_ratio, daily_var]
 
 strategy_stats = calculate_performance(st.session_state.returns.mean(axis=1))
 benchmark_ticker = "^NSEI"  # Nifty 50 Index
@@ -56,13 +65,14 @@ benchmark_data = get_stock_data([benchmark_ticker], start_date, end_date).pct_ch
 benchmark_stats = calculate_performance(benchmark_data[benchmark_ticker])
 
 stats_df = pd.DataFrame({
-    "Metric": ["Annual Return", "Annual Volatility", "Sharpe Ratio", "Max Drawdown"],
+    "Metric": ["Annual Return", "Annual Volatility", "Sharpe Ratio", "Max Drawdown", "Stability",
+               "Omega Ratio", "Sortino Ratio", "Skewness", "Kurtosis", "Tail Ratio", "Daily Value at Risk"],
     "Strategy": strategy_stats,
     "Benchmark": benchmark_stats
 })
 
 st.markdown("## Performance Statistics")
-st.dataframe(stats_df)
+st.table(stats_df.set_index("Metric"))
 
 # Additional Visualizations
 st.markdown("## Data Visualization :bar_chart:")
@@ -121,5 +131,6 @@ if st.button("Run Optimization"):
         st.success("Optimized portfolio successfully generated!")
     else:
         st.error("Portfolio optimization failed.")
+
 
 
