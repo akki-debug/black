@@ -121,12 +121,24 @@ ax4.set_ylabel("Expected Return")
 st.pyplot(fig4)
 plt.close(fig4)
 
+# Backtesting
+st.subheader("Backtesting: Portfolio Performance")
 if "portafolios_bl" in st.session_state and st.session_state.portafolios_bl is not None:
-    st.subheader("Optimized Portfolio with Varying Risk Aversion Levels (λ)")
-    st.dataframe(st.session_state.portafolios_bl)
+    weights = st.session_state.portafolios_bl.iloc[0, :-1].values
+    portfolio_returns = (st.session_state.returns @ weights).cumsum()
+    equal_weight_returns = (st.session_state.returns.mean(axis=1)).cumsum()
     
-    fig5, ax5 = plt.subplots(figsize=(12, 6))
-    sns.barplot(data=st.session_state.portafolios_bl.drop(columns=["Total"]).T, ax=ax5)
-    ax5.set_title("Asset Allocation by Risk Aversion Level (λ)")
-    st.pyplot(fig5)
-    plt.close(fig5)
+    fig6, ax6 = plt.subplots(figsize=(12, 6))
+    sns.lineplot(x=portfolio_returns.index, y=portfolio_returns, label="Optimized Portfolio", ax=ax6)
+    sns.lineplot(x=equal_weight_returns.index, y=equal_weight_returns, label="Equal Weight Portfolio", ax=ax6)
+    ax6.set_title("Cumulative Portfolio Returns")
+    st.pyplot(fig6)
+    plt.close(fig6)
+    
+    st.write("Final Portfolio Performance:")
+    final_returns = pd.DataFrame({
+        "Optimized Portfolio": portfolio_returns.iloc[-1],
+        "Equal Weight Portfolio": equal_weight_returns.iloc[-1]
+    }, index=["Total Return"])
+    st.dataframe(final_returns)
+
