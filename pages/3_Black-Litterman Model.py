@@ -109,13 +109,21 @@ st.dataframe(annualized_return.rename("Annualized Return"))
 
 # Final Portfolio Evaluation
 st.subheader("Portfolio Performance Summary")
-final_returns = pd.DataFrame({
-    "Initial Capital": [initial_capital],
-    "Final Portfolio Value": [portfolio_final_value],
-    "Percentage Return (%)": [percentage_return],
-    "Annualized Return (%)": [annualized_return.mean() * 100],
-    "Max Drawdown (%)": [max_drawdown.mean() * 100]
-})
-st.dataframe(final_returns.style.format({"Percentage Return (%)": "{:.2f}", "Annualized Return (%)": "{:.2f}", "Max Drawdown (%)": "{:.2f}"}))
+initial_capital = 100000  # Define initial capital
+if st.session_state.portafolios_bl is not None:
+    weights = st.session_state.portafolios_bl.iloc[0].values
+    portfolio_returns = (st.session_state.returns @ weights).cumsum()
+    portfolio_final_value = initial_capital * (1 + portfolio_returns.iloc[-1])
+    percentage_return = ((portfolio_final_value - initial_capital) / initial_capital) * 100
 
+    final_returns = pd.DataFrame({
+        "Initial Capital": [initial_capital],
+        "Final Portfolio Value": [portfolio_final_value],
+        "Percentage Return (%)": [percentage_return],
+        "Annualized Return (%)": [annualized_return.mean() * 100],
+        "Max Drawdown (%)": [max_drawdown.mean() * 100]
+    })
+    st.dataframe(final_returns.style.format({"Percentage Return (%)": "{:.2f}", "Annualized Return (%)": "{:.2f}", "Max Drawdown (%)": "{:.2f}"}))
+else:
+    st.warning("Optimized portfolio not found. Run optimization first.")
 
