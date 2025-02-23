@@ -93,7 +93,7 @@ negative_returns = st.session_state.returns[st.session_state.returns < 0].std()
 sortino_ratio = (st.session_state.returns.mean() - risk_free_rate) / negative_returns * np.sqrt(252)
 st.dataframe(sortino_ratio.rename("Sortino Ratio"))
 
-# Maximum Drawdown
+# Maximum Drawdown & Additional Metrics
 st.markdown("### Maximum Drawdown Formula")
 st.latex(r"""MaxDrawdown = \frac{CumulativeReturn_{min} - CumulativeReturn_{max}}{CumulativeReturn_{max}}""")
 cumulative_returns = (1 + st.session_state.returns).cumprod()
@@ -102,45 +102,20 @@ drawdown = (cumulative_returns - rolling_max) / rolling_max
 max_drawdown = drawdown.min()
 st.dataframe(max_drawdown.rename("Max Drawdown"))
 
-# Calmar Ratio
-st.markdown("### Calmar Ratio Formula")
-st.latex(r"""Calmar = \frac{AnnualizedReturn}{|MaxDrawdown|}""")
-calmar_ratio = (st.session_state.returns.mean() * 252) / abs(max_drawdown)
-st.dataframe(calmar_ratio.rename("Calmar Ratio"))
+# Annualized Return
+annualized_return = (1 + st.session_state.returns.mean()) ** 252 - 1
+st.markdown("### Annualized Return")
+st.dataframe(annualized_return.rename("Annualized Return"))
 
-# Volatility
-st.markdown("### Portfolio Volatility Formula")
-st.latex(r"""Volatility = \sigma_p \times \sqrt{252}""")
-portfolio_volatility = st.session_state.returns.std() * np.sqrt(252)
-st.dataframe(portfolio_volatility.rename("Volatility"))
-
-# Drawdown Chart
-fig3, ax3 = plt.subplots(figsize=(12, 6))
-sns.lineplot(data=drawdown, ax=ax3)
-ax3.set_title("Drawdown Over Time")
-st.pyplot(fig3)
-plt.close(fig3)
-
-# Backtesting
-st.subheader("Backtesting: Portfolio Performance")
-initial_capital = 100000
-if st.session_state.portafolios_bl is not None:
-    weights = st.session_state.portafolios_bl.iloc[0].values
-    portfolio_returns = (st.session_state.returns @ weights).cumsum()
-    equal_weight_returns = (st.session_state.returns.mean(axis=1)).cumsum()
-    portfolio_final_value = initial_capital * (1 + portfolio_returns.iloc[-1])
-    percentage_return = ((portfolio_final_value - initial_capital) / initial_capital) * 100
-    
-    fig6, ax6 = plt.subplots(figsize=(12, 6))
-    sns.lineplot(x=portfolio_returns.index, y=portfolio_returns, label="Optimized Portfolio", ax=ax6)
-    sns.lineplot(x=equal_weight_returns.index, y=equal_weight_returns, label="Equal Weight Portfolio", ax=ax6)
-    ax6.set_title("Cumulative Portfolio Returns")
-    st.pyplot(fig6)
-    plt.close(fig6)
-    
-    final_returns = pd.DataFrame({"Initial Capital": [initial_capital], "Final Portfolio Value": [portfolio_final_value], "Percentage Return (%)": [percentage_return]})
-    st.dataframe(final_returns)
-else:
-    st.warning("Optimized portfolio not found. Run optimization first.")
+# Final Portfolio Evaluation
+st.subheader("Portfolio Performance Summary")
+final_returns = pd.DataFrame({
+    "Initial Capital": [initial_capital],
+    "Final Portfolio Value": [portfolio_final_value],
+    "Percentage Return (%)": [percentage_return],
+    "Annualized Return (%)": [annualized_return.mean() * 100],
+    "Max Drawdown (%)": [max_drawdown.mean() * 100]
+})
+st.dataframe(final_returns.style.format({"Percentage Return (%)": "{:.2f}", "Annualized Return (%)": "{:.2f}", "Max Drawdown (%)": "{:.2f}"}))
 
 
