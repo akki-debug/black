@@ -11,6 +11,10 @@ from datetime import datetime
 st.set_page_config(page_title="Black-Litterman Model", page_icon="mag")
 st.title("Black-Litterman Model")
 
+# Initialize session state variables
+if "portafolios_bl" not in st.session_state:
+    st.session_state.portafolios_bl = None
+
 # Fetch stock data directly using yfinance
 nifty50_stocks = [
     "RELIANCE.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "TCS.NS",
@@ -114,7 +118,7 @@ if st.button("Continue"):
     portafolios_bl = portafolios_bl.sort_index()
     st.session_state.portafolios_bl = portafolios_bl
 
-if st.session_state.portafolios_bl is not None:
+if "portafolios_bl" in st.session_state and st.session_state.portafolios_bl is not None:
     st.subheader("Optimized Portfolio with Varying Risk Aversion Levels (λ)")
     st.dataframe(st.session_state.portafolios_bl)
     
