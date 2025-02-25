@@ -8,8 +8,8 @@ import streamlit as st
 from datetime import datetime
 
 # Page Config
-st.set_page_config(page_title="Black-Litterman Model", page_icon="mag")
-st.title("Black-Litterman Model")
+st.set_page_config(page_title="Black-Litterman Model and Sensitivity Analysis", page_icon="mag")
+st.title("Sensitivity Analysis")
 
 # Initialize session state variables
 if "portafolios_bl" not in st.session_state:
@@ -38,8 +38,7 @@ else:
     st.warning("No data available. Please select valid tickers and date range.")
     st.stop()
 
-# Black-Litterman Model Implementation
-st.subheader("Black-Litterman Model and Sensitivity Analysis")
+
 
 # User-defined views
 st.markdown("### Define Your Views on Expected Returns")
