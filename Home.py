@@ -9,22 +9,21 @@ texto = '''
 
 This project is a Python application for downloading, analyzing, and optimizing financial asset data. 
 It allows transforming assets into a specific currency, calculating risk and return metrics, optimizing 
-portfolios, and performing comparative backtesting against the S&P 500 index. Additionally, it includes
+portfolios, and performing comparative backtesting against the Nifty 50 index. Additionally, it includes
 the implementation of the Black-Litterman model to customize optimizations based on financial "views".
 
 ## :bulb: Project Features
 
 ### 1.1. Financial Data Download :open_file_folder:
 - **Data Source**: Downloads historical financial asset data using the Yahoo Finance API.
-- **Currency Conversion**: Converts assets to a specific currency (e.g., USD to MXN) for 
-consistent comparisons across assets.
+
 
 ### 1.2. Price Visualization :chart_with_upwards_trend:
 - **Closing Price Charts**: Visualization of historical prices for each asset.
 - **Daily Returns**: Calculation of daily returns to analyze volatility.
 
 ### 1.3. Risk-Free Rates :heavy_dollar_sign:
-- **Interest Rate Sources**: Integrates Banxico and FRED APIs to obtain risk-free rates.
+- **Interest Rate Sources**: Integrates  FRED APIs to obtain risk-free rates.
 
 ### 1.4. Risk and Return Metrics Calculation :straight_ruler:
 - **Value at Risk (VaR)**: Estimates the maximum risk over a given period under normal conditions.
@@ -40,13 +39,12 @@ Optimization based on:
 return level.
 
 ### 2.2. Portfolio Backtesting  :thinking_face:
-- **Comparison with S&P 500**: Backtesting evaluates the effectiveness of generated strategies
-by comparing them against the S&P 500 index performance.
+- **Comparison with Nifty 50**: Backtesting evaluates the effectiveness of generated strategies
+by comparing them against the Nifty 50 index performance.
 
 ### 3.1 Black-Litterman Model :exploding_head:
 - **Custom Financial Views**: Adjusts portfolio optimization based on expected returns for each
-asset using the Black-Litterman model. For more details, see this 
-[Investopedia article](https://www.investopedia.com/terms/b/black-litterman_model.asp).
+asset using the Black-Litterman model. 
 
 ## Technologies and Libraries :books:
 
