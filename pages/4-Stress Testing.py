@@ -9,11 +9,17 @@ nifty_tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "HINDUNILVR.
 
 # Function to fetch stock data from Yahoo Finance
 def fetch_stock_data(tickers):
+    if not tickers:
+        st.error("No tickers selected. Please choose at least one ticker.")
+        return pd.Series(dtype=float), pd.DataFrame()
+    
     data = yf.download(tickers, period="1y", interval="1d")
-    if data.empty or "Adj Close" not in data:
+    if data.empty:
         st.error("Failed to fetch stock data. Please check the selected tickers.")
         return pd.Series(dtype=float), pd.DataFrame()
-    returns = data["Adj Close"].pct_change().dropna()
+    
+    adj_close = data["Adj Close"].dropna()
+    returns = adj_close.pct_change().dropna()
     expected_returns = returns.mean()
     cov_matrix = returns.cov()
     return expected_returns, cov_matrix
@@ -67,3 +73,4 @@ ax.set_ylabel("Expected Return")
 ax.set_title("Impact of Shocks on Expected Returns")
 ax.legend()
 st.pyplot(fig)
+
