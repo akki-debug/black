@@ -1,76 +1,109 @@
-import streamlit as st
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import numpy as np
 import yfinance as yf
+import scipy.optimize as sco
+import matplotlib.pyplot as plt
+import seaborn as sns
+import streamlit as st
+from datetime import datetime
 
-# List of Nifty 50 stock tickers
-nifty_tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "HINDUNILVR.NS", "ICICIBANK.NS", "SBIN.NS", "BAJFINANCE.NS", "KOTAKBANK.NS", "LT.NS"]
+# Page Config
+st.set_page_config(page_title="Black-Litterman Model", page_icon="mag")
+st.title("Black-Litterman Model")
 
-# Function to fetch stock data from Yahoo Finance
-def fetch_stock_data(tickers):
-    if not tickers:
-        st.error("No tickers selected. Please choose at least one ticker.")
-        return pd.Series(dtype=float), pd.DataFrame()
-    
-    data = yf.download(tickers, period="1y", interval="1d")
-    if data.empty:
-        st.error("Failed to fetch stock data. Please check the selected tickers.")
-        return pd.Series(dtype=float), pd.DataFrame()
-    
-    adj_close = data["Adj Close"].dropna()
-    returns = adj_close.pct_change().dropna()
-    expected_returns = returns.mean()
-    cov_matrix = returns.cov()
-    return expected_returns, cov_matrix
-
-# Function to perform stress testing
-def stress_test(portfolio, shocks):
-    stressed_portfolio = portfolio.copy()
-    stressed_portfolio["Expected Return"] += shocks
-    return stressed_portfolio
-
-# Streamlit UI
-st.title("Stress Testing – Sensitivity Analysis on Nifty 50 Portfolio")
-
-st.sidebar.header("Portfolio Inputs")
-num_assets = st.sidebar.number_input("Number of Assets", min_value=2, max_value=len(nifty_tickers), value=4, step=1)
-
-# User input for selecting Nifty stocks
-tickers = st.sidebar.multiselect("Select Nifty 50 Stocks", nifty_tickers, nifty_tickers[:num_assets])
+# Initialize session state variables
+if "portafolios_bl" not in st.session_state:
+    st.session_state.portafolios_bl = None
 
 # Fetch stock data
-expected_returns, cov_matrix = fetch_stock_data(tickers)
+def get_stock_data(tickers, start, end):
+    data = yf.download(tickers, start=start, end=end)["Close"].dropna()
+    return data
 
-if expected_returns.empty:
+nifty50_stocks = [
+    "RELIANCE.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "TCS.NS",
+    "HINDUNILVR.NS", "ITC.NS", "LT.NS", "AXISBANK.NS", "BHARTIARTL.NS"
+]
+selected_stocks = st.multiselect("Select stocks for portfolio:", nifty50_stocks, default=nifty50_stocks[:5])
+
+start_date = st.date_input("Start Date", value=datetime(2023, 1, 1))
+end_date = st.date_input("End Date", value=datetime(2023, 12, 31))
+
+st.session_state.data = get_stock_data(selected_stocks, start_date, end_date)
+st.session_state.returns = st.session_state.data.pct_change().dropna()
+
+if st.session_state.data is not None and st.session_state.returns is not None:
+    st.success("Stock data successfully fetched.")
+    st.write("Closing prices:")
+    st.dataframe(st.session_state.data.tail())
+    st.write("Daily returns:")
+    st.dataframe(st.session_state.returns.tail())
+else:
+    st.warning("No data available. Please select valid tickers and date range.")
     st.stop()
 
-# User input for shocks
-st.sidebar.subheader("Shocks to Expected Returns (%)")
-shocks = np.array([st.sidebar.number_input(f"Shock for {tickers[i]}", value=0.0) for i in range(len(tickers))]) / 100
+# Black-Litterman Model Implementation
+st.subheader("Black-Litterman Model and Sensitivity Analysis")
 
-# Portfolio DataFrame
-portfolio = pd.DataFrame({
-    "Asset": tickers,
-    "Expected Return": expected_returns.values,
-})
+# User-defined views
+st.markdown("### Define Your Views on Expected Returns")
+views = {}
+for stock in selected_stocks:
+    views[stock] = st.number_input(f"Expected Return for {stock} (%)", value=st.session_state.returns.mean()[stock] * 100)
 
-# Perform Stress Testing
-stressed_portfolio = stress_test(portfolio, shocks)
+view_vector = np.array([views[stock] / 100 for stock in selected_stocks])
+confidence_levels = st.slider("Confidence Level in Views (%)", min_value=50, max_value=100, value=75) / 100
 
-# Display results
-st.subheader("Original Portfolio")
-st.dataframe(portfolio)
+# Compute Adjusted Returns using Black-Litterman Model
+cov_matrix = st.session_state.returns.cov()
+mkt_implied_return = st.session_state.returns.mean().values
+bl_adjusted_return = (1 - confidence_levels) * mkt_implied_return + confidence_levels * view_vector
 
-st.subheader("Stressed Portfolio")
-st.dataframe(stressed_portfolio)
-
-# Plot the impact of shocks
-fig, ax = plt.subplots()
-ax.bar(portfolio["Asset"], portfolio["Expected Return"], label="Original", alpha=0.6)
-ax.bar(stressed_portfolio["Asset"], stressed_portfolio["Expected Return"], label="Stressed", alpha=0.6)
-ax.set_ylabel("Expected Return")
-ax.set_title("Impact of Shocks on Expected Returns")
-ax.legend()
-st.pyplot(fig)
-
+# Portfolio Optimization with Adjusted Returns
+if st.button("Run Optimization"):
+    def portfolio_volatility(weights, cov_matrix):
+        return np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+    
+    num_assets = len(st.session_state.returns.columns)
+    initial_weights = np.ones(num_assets) / num_assets
+    bounds = tuple((0, 1) for asset in range(num_assets))
+    constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
+    
+    optimized = sco.minimize(portfolio_volatility, initial_weights, args=(cov_matrix),
+                              method='SLSQP', bounds=bounds, constraints=constraints)
+    
+    if optimized.success:
+        optimized_weights = pd.DataFrame([optimized.x], columns=st.session_state.returns.columns).T
+        optimized_weights.columns = ["Weight"]
+        expected_return = np.dot(optimized.x, bl_adjusted_return) * 252
+        expected_volatility = portfolio_volatility(optimized.x, cov_matrix)
+        expected_sharpe = expected_return / expected_volatility
+        
+        st.success("Optimized portfolio successfully generated!")
+        st.markdown("## Optimized Portfolio Weights")
+        st.table(optimized_weights)
+        
+        st.markdown("### Portfolio Metrics")
+        st.write(f"**Expected Annual Return:** {expected_return:.2%}")
+        st.write(f"**Expected Volatility:** {expected_volatility:.2%}")
+        st.write(f"**Sharpe Ratio:** {expected_sharpe:.2f}")
+        
+        # Sensitivity Analysis on Views
+        st.markdown("## Sensitivity Analysis on Subjective Views")
+        num_simulations = 1000
+        perturbed_views = np.random.normal(loc=view_vector, scale=0.02, size=(num_simulations, len(selected_stocks)))
+        simulated_returns = (1 - confidence_levels) * mkt_implied_return + confidence_levels * perturbed_views
+        simulated_portfolio_returns = simulated_returns @ optimized.x * 252
+        
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.histplot(simulated_portfolio_returns, bins=30, kde=True, ax=ax)
+        ax.axvline(expected_return, color='r', linestyle='dashed', label='Optimized Return')
+        ax.set_title("Distribution of Simulated Portfolio Returns Under Varying Views")
+        ax.legend()
+        st.pyplot(fig)
+        plt.close(fig)
+        
+        st.write(f"**Simulated Expected Return Mean:** {np.mean(simulated_portfolio_returns):.2%}")
+        st.write(f"**Simulated Standard Deviation:** {np.std(simulated_portfolio_returns):.2%}")
+    else:
+        st.error("Portfolio optimization failed.")
