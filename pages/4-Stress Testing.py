@@ -241,14 +241,7 @@ if result.success:
     fig = px.pie(weights_df, values='Weight', names=weights_df.index, hole=0.3)
     st.plotly_chart(fig, use_container_width=True)
     
-    # Efficient Frontier
-    st.subheader("Efficient Frontier")
-    efficient_frontier = calculate_efficient_frontier(posterior_returns, posterior_cov, risk_free_rate)
-    fig = px.line(efficient_frontier, x='Volatility', y='Return', 
-                 title='Efficient Frontier with Black-Litterman Returns')
-    fig.add_trace(px.scatter(x=[portfolio_vol], y=[portfolio_return], 
-                           labels={'x':'Volatility', 'y':'Return'}).data[0])
-    st.plotly_chart(fig, use_container_width=True)
+   
     
     # Risk Analysis
     st.subheader("Risk Analysis")
