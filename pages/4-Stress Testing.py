@@ -268,14 +268,7 @@ if result.success:
     fig.add_trace(px.scatter(x=[portfolio_vol], y=[portfolio_return]).data[0])
     st.plotly_chart(fig, use_container_width=True)
     
-    # Download Results
-    st.subheader("Export Results")
-    output = BytesIO()
-    weights_df.to_excel(output, index=True)
-    st.download_button("Download Portfolio Weights", 
-                      data=output.getvalue(),
-                      file_name="portfolio_weights.xlsx",
-                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+   
     
 else:
     st.error("Portfolio optimization failed. Please adjust your constraints.")
