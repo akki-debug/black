@@ -7,10 +7,7 @@ st.set_page_config(
 texto = '''
 # :moneybag: :bar_chart: Analysis and Optimization of Financial Portfolios with Python
 
-This project is a Python application for downloading, analyzing, and optimizing financial asset data. 
-It allows transforming assets into a specific currency, calculating risk and return metrics, optimizing 
-portfolios, and performing comparative backtesting against the Nifty 50 index. Additionally, it includes
-the implementation of the Black-Litterman model to customize optimizations based on financial "views".
+
 
 ## :bulb: Project Features
 
