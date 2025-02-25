@@ -5,17 +5,31 @@ import scipy.optimize as sco
 import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
-from datetime import datetime
 import plotly.express as px
+from datetime import datetime
 from io import BytesIO
 
 # Page Config
 st.set_page_config(page_title="Advanced Black-Litterman Portfolio Optimizer", page_icon="📈", layout="wide")
 st.title("Advanced Black-Litterman Portfolio Optimizer with Sensitivity Analysis")
 
+# Nifty 50 Constituents (Updated List)
+nifty50_stocks = [
+    "RELIANCE.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "TCS.NS",
+    "HINDUNILVR.NS", "ITC.NS", "KOTAKBANK.NS", "SBIN.NS", "ASIANPAINT.NS",
+    "TITAN.NS", "BAJFINANCE.NS", "LT.NS", "MARUTI.NS", "NTPC.NS", 
+    "ONGC.NS", "SUNPHARMA.NS", "TATAMOTORS.NS", "ADANIPORTS.NS", "POWERGRID.NS",
+    "NESTLEIND.NS", "ULTRACEMCO.NS", "BAJAJ-AUTO.NS", "GRASIM.NS", "JSWSTEEL.NS",
+    "TATASTEEL.NS", "AXISBANK.NS", "HCLTECH.NS", "INDUSINDBK.NS", "DRREDDY.NS",
+    "DIVISLAB.NS", "BHARTIARTL.NS", "UPL.NS", "BAJAJFINSV.NS", "HDFCLIFE.NS",
+    "SBILIFE.NS", "EICHERMOT.NS", "SHREECEM.NS", "BRITANNIA.NS", "COALINDIA.NS",
+    "TECHM.NS", "WIPRO.NS", "CIPLA.NS", "HEROMOTOCO.NS", "APOLLOHOSP.NS",
+    "ADANIENT.NS", "BPCL.NS", "IOC.NS", "VEDL.NS"
+]
+
 # Initialize session state
-if "portafolios_bl" not in st.session_state:
-    st.session_state.portafolios_bl = None
+if "portfolios_bl" not in st.session_state:
+    st.session_state.portfolios_bl = None
 
 # Enhanced Data Handling
 @st.cache_data(ttl=3600)
@@ -75,10 +89,12 @@ def black_litterman_adjustment(prior_returns, cov_matrix, P, Q, tau=0.05, omega=
     
     return posterior_returns, posterior_cov
 
-# Streamlit UI Components
+# Sidebar Configuration
 with st.sidebar:
     st.header("Configuration Panel")
-    selected_stocks = st.multiselect("Select Stocks (Nifty50)", nifty50_stocks, default=nifty50_stocks[:5])
+    selected_stocks = st.multiselect("Select Stocks (Nifty50)", 
+                                   nifty50_stocks, 
+                                   default=nifty50_stocks[:5])
     start_date = st.date_input("Start Date", value=datetime(2022, 1, 1))
     end_date = st.date_input("End Date", value=datetime(2023, 12, 31))
     data_freq = st.selectbox("Data Frequency", ['Daily', 'Weekly', 'Monthly'], index=0)
@@ -259,7 +275,14 @@ if result.success:
     fig.add_trace(px.scatter(x=[portfolio_vol], y=[portfolio_return]).data[0])
     st.plotly_chart(fig, use_container_width=True)
     
-  
+    # Download Results
+    st.subheader("Export Results")
+    output = BytesIO()
+    weights_df.to_excel(output, index=True)
+    st.download_button("Download Portfolio Weights", 
+                      data=output.getvalue(),
+                      file_name="portfolio_weights.xlsx",
+                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     
 else:
     st.error("Portfolio optimization failed. Please adjust your constraints.")
