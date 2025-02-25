@@ -34,10 +34,6 @@ st.session_state.returns = st.session_state.data.pct_change().dropna()
 
 if st.session_state.data is not None and st.session_state.returns is not None:
     st.success("Stock data successfully fetched.")
-    st.write("Closing prices:")
-    st.dataframe(st.session_state.data.tail())
-    st.write("Daily returns:")
-    st.dataframe(st.session_state.returns.tail())
 else:
     st.warning("No data available. Please select valid tickers and date range.")
     st.stop()
