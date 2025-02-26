@@ -7,15 +7,14 @@ import seaborn as sns
 import streamlit as st
 from datetime import datetime
 
-# Page Config
 st.set_page_config(page_title="Black-Litterman Model", page_icon="mag")
 st.title("Black-Litterman Model")
 
-# Initialize session state variables
+
 if "portafolios_bl" not in st.session_state:
     st.session_state.portafolios_bl = None
 
-# Fetch stock data
+
 def get_stock_data(tickers, start, end):
     data = yf.download(tickers, start=start, end=end)["Close"].dropna()
     return data
@@ -50,7 +49,7 @@ else:
     st.warning("No data available. Please select valid tickers and date range.")
     st.stop()
 
-# Performance Statistics
+
 
 def calculate_performance(returns):
     cumulative_returns = (1 + returns).cumprod()
@@ -76,7 +75,7 @@ def calculate_performance(returns):
     ]
 
 strategy_stats = calculate_performance(st.session_state.returns.mean(axis=1))
-benchmark_ticker = "^NSEI"  # Nifty 50 Index
+benchmark_ticker = "^NSEI"  
 benchmark_data = get_stock_data([benchmark_ticker], start_date, end_date).pct_change().dropna()
 benchmark_stats = calculate_performance(benchmark_data[benchmark_ticker])
 
@@ -90,7 +89,7 @@ stats_df = pd.DataFrame({
 st.markdown("## Performance Statistics")
 st.table(stats_df.set_index("Metric"))
 
-# Additional Visualizations
+
 st.markdown("## Data Visualization :bar_chart:")
 fig1, ax1 = plt.subplots(figsize=(12, 6))
 sns.lineplot(data=st.session_state.data, ax=ax1)
@@ -128,7 +127,7 @@ ax6.set_title("Rolling Volatility of Selected Stocks")
 st.pyplot(fig6)
 plt.close(fig6)
 
-# Portfolio Optimization
+
 st.subheader("Optimize Portfolio")
 if st.button("Run Optimization"):
     def portfolio_volatility(weights, cov_matrix):
@@ -158,7 +157,7 @@ if st.button("Run Optimization"):
         st.write(f"**Expected Volatility:** {expected_volatility:.2%}")
         st.write(f"**Sharpe Ratio:** {expected_sharpe:.2f}")
         
-        # Plot Efficient Frontier
+        
         def plot_efficient_frontier():
             fig, ax = plt.subplots(figsize=(10, 6))
             ax.scatter(expected_volatility, expected_return, marker="*", color="r", s=200, label="Optimized Portfolio")
