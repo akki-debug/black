@@ -9,11 +9,11 @@ import plotly.express as px
 from datetime import datetime
 from io import BytesIO
 
-# Page Config
+
 st.set_page_config(page_title="Advanced Black-Litterman Portfolio Optimizer", page_icon="📈", layout="wide")
 st.title("Advanced Black-Litterman Portfolio Optimizer with Sensitivity Analysis")
 
-# Nifty 50 Constituents (Updated List)
+
 nifty50_stocks = [
     "RELIANCE.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "TCS.NS",
     "HINDUNILVR.NS", "ITC.NS", "KOTAKBANK.NS", "SBIN.NS", "ASIANPAINT.NS",
@@ -27,11 +27,11 @@ nifty50_stocks = [
     "ADANIENT.NS", "BPCL.NS", "IOC.NS", "VEDL.NS"
 ]
 
-# Initialize session state
+
 if "portfolios_bl" not in st.session_state:
     st.session_state.portfolios_bl = None
 
-# Enhanced Data Handling
+
 @st.cache_data(ttl=3600)
 def get_stock_data(tickers, start, end, interval='1d'):
     data = yf.download(tickers, start=start, end=end, interval=interval)["Close"]
@@ -40,7 +40,7 @@ def get_stock_data(tickers, start, end, interval='1d'):
         st.stop()
     return data.dropna(axis=1, how='all').dropna()
 
-# Risk Metrics Calculations
+
 def calculate_var(returns, confidence_level=0.95):
     return np.percentile(returns, 100 * (1 - confidence_level))
 
@@ -48,7 +48,7 @@ def calculate_cvar(returns, confidence_level=0.95):
     var = calculate_var(returns, confidence_level)
     return returns[returns <= var].mean()
 
-# Efficient Frontier Calculation
+
 def calculate_efficient_frontier(returns, cov_matrix, risk_free_rate=0.0):
     num_assets = len(returns)
     args = (cov_matrix,)
@@ -75,12 +75,12 @@ def calculate_efficient_frontier(returns, cov_matrix, risk_free_rate=0.0):
             })
     return pd.DataFrame(efficient_portfolios)
 
-# Enhanced Black-Litterman Model
+
 def black_litterman_adjustment(prior_returns, cov_matrix, P, Q, tau=0.05, omega=None):
     if omega is None:
         omega = np.diag(np.diag(tau * P @ cov_matrix @ P.T))
     
-    # Black-Litterman formula
+    
     inv_cov = np.linalg.inv(tau * cov_matrix)
     inv_omega = np.linalg.inv(omega)
     
@@ -89,7 +89,6 @@ def black_litterman_adjustment(prior_returns, cov_matrix, P, Q, tau=0.05, omega=
     
     return posterior_returns, posterior_cov
 
-# Sidebar Configuration
 with st.sidebar:
     st.header("Configuration Panel")
     selected_stocks = st.multiselect("Select Stocks (Nifty50)", 
@@ -100,7 +99,7 @@ with st.sidebar:
     data_freq = st.selectbox("Data Frequency", ['Daily', 'Weekly', 'Monthly'], index=0)
     risk_free_rate = st.number_input("Risk-Free Rate (%)", value=4.0, step=0.1)/100
 
-# Data Loading and Processing
+
 interval_map = {'Daily': '1d', 'Weekly': '1wk', 'Monthly': '1mo'}
 try:
     data = get_stock_data(selected_stocks, start_date, end_date, interval_map[data_freq])
@@ -110,7 +109,7 @@ except Exception as e:
     st.error(f"Error loading data: {str(e)}")
     st.stop()
 
-# Data Exploration Section
+
 st.header("Data Exploration")
 col1, col2 = st.columns(2)
 with col1:
@@ -125,13 +124,13 @@ with col2:
                    zmin=-1, zmax=1, title="Asset Return Correlations")
     st.plotly_chart(fig, use_container_width=True)
 
-# Black-Litterman Configuration
+
 st.header("Black-Litterman Model Configuration")
 col1, col2 = st.columns([3, 2])
 
 with col1:
     st.subheader("Market Implied Returns")
-    market_weights = data.iloc[-1] / data.iloc[-1].sum()  # Market-cap weights
+    market_weights = data.iloc[-1] / data.iloc[-1].sum()  
     delta = st.slider("Risk Aversion Coefficient (δ)", 1.0, 5.0, 2.5, 0.1)
     prior_returns = delta * returns.cov() @ market_weights.values
     prior_returns_series = pd.Series(prior_returns, index=returns.columns)
@@ -142,7 +141,7 @@ with col2:
     tau = st.slider("Uncertainty Scaling (τ)", 0.01, 1.0, 0.05, 0.01)
     confidence_level = st.slider("Base Confidence Level", 0.5, 1.0, 0.75, 0.05)
 
-# User Views Configuration
+
 st.subheader("Investor Views Configuration")
 views = {}
 P = []
@@ -178,12 +177,12 @@ P = np.array(P)
 Q = np.array(Q)
 omega = np.diag([(1 - cl) / cl * tau * (P[i] @ returns.cov() @ P[i].T) for i, cl in enumerate(confidence_levels)])
 
-# Calculate Posterior Returns
+
 posterior_returns, posterior_cov = black_litterman_adjustment(
     prior_returns, returns.cov(), P, Q, tau, omega
 )
 
-# Portfolio Optimization
+
 st.header("Portfolio Optimization")
 optimization_method = st.selectbox("Optimization Objective", 
                                   ["Minimum Volatility", "Maximum Sharpe", "Custom Target Return"])
@@ -229,13 +228,13 @@ if result.success:
     portfolio_vol = np.sqrt(weights @ posterior_cov @ weights) * np.sqrt(annual_factor)
     sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_vol
     
-    # Display Results
+    
     col1, col2, col3 = st.columns(3)
     col1.metric("Expected Return", f"{portfolio_return:.2%}")
     col2.metric("Expected Volatility", f"{portfolio_vol:.2%}")
     col3.metric("Sharpe Ratio", f"{sharpe_ratio:.2f}")
     
-    # Weight Distribution
+    
     st.subheader("Portfolio Composition")
     weights_df = pd.DataFrame(weights, index=selected_stocks, columns=['Weight'])
     fig = px.pie(weights_df, values='Weight', names=weights_df.index, hole=0.3)
@@ -243,7 +242,7 @@ if result.success:
     
    
     
-    # Risk Analysis
+    
     st.subheader("Risk Analysis")
     portfolio_returns = (returns @ weights).dropna()
     var_95 = calculate_var(portfolio_returns)
@@ -253,7 +252,7 @@ if result.success:
     col1.metric("95% Value at Risk (VaR)", f"{var_95:.2%}")
     col2.metric("95% Conditional VaR (CVaR)", f"{cvar_95:.2%}")
     
-    # Sensitivity Analysis
+    
     st.subheader("Sensitivity Analysis")
     num_simulations = st.slider("Number of Simulations", 100, 10000, 1000)
     perturbation_scale = st.slider("Perturbation Scale", 0.01, 0.2, 0.05)
