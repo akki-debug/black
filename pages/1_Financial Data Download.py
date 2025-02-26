@@ -6,10 +6,10 @@ import seaborn as sns
 import streamlit as st
 from datetime import datetime
 
-# Page Config
+
 st.set_page_config(page_title="NIFTY 50 Stock Dashboard", page_icon="📈", layout="wide")
 
-# Custom CSS for styling
+
 st.markdown("""
     <style>
         .stApp {
@@ -35,14 +35,14 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Title and header
+
 st.markdown('<h1 class="main-title">📈 NIFTY 50 Stock Dashboard</h1>', unsafe_allow_html=True)
 st.markdown('<p class="sub-title">Real-time Stock Market Analysis</p>', unsafe_allow_html=True)
 
-# Sidebar for selections
+
 st.sidebar.header("⚙️ Settings")
 
-# Stock Selection
+
 nifty50_stocks = [
     "RELIANCE.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "TCS.NS",
     "HINDUNILVR.NS", "ITC.NS", "KOTAKBANK.NS", "SBIN.NS", "ASIANPAINT.NS",
@@ -57,35 +57,34 @@ nifty50_stocks = [
 ]
 selected_stock = st.sidebar.selectbox("🔍 Select a Stock", nifty50_stocks)
 
-# Date Selection
+
 start_date = st.sidebar.date_input("📅 Start Date", value=pd.to_datetime("2023-01-01"))
 end_date = st.sidebar.date_input("📅 End Date", value=pd.to_datetime("2023-12-31"))
 
-# Convert dates
 start_date_str, end_date_str = start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')
 
-# Fetch stock data
+
 try:
     stock_data = yf.Ticker(selected_stock)
     hist = stock_data.history(start=start_date_str, end=end_date_str)
 
-    # Display stock info
+    
     st.markdown(f"### 📊 Basic Information - {selected_stock}")
     with st.expander("🔍 View Stock Details"):
         st.write(stock_data.info)
 
-    # Price & Volume Charts
+    
     st.markdown("### 📈 Stock Performance")
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
 
-    # Price Chart
+    
     sns.lineplot(x=hist.index, y=hist["Close"], ax=ax1, color="blue", linewidth=2.5)
     ax1.set_title("Stock Closing Price", fontsize=14)
     ax1.set_xlabel("Date")
     ax1.set_ylabel("Price (₹)")
     ax1.grid(True)
 
-    # Volume Chart
+    
     sns.barplot(x=hist.index, y=hist["Volume"], ax=ax2, color="orange", alpha=0.7)
     ax2.set_title("Trading Volume", fontsize=14)
     ax2.set_xlabel("Date")
@@ -94,7 +93,7 @@ try:
 
     st.pyplot(fig)
 
-    # Stock Statistics
+    
     st.markdown("### 📌 Key Statistics")
     stats = {
         "📍 Current Price": round(hist["Close"][-1], 2),
@@ -104,7 +103,7 @@ try:
         "📉 52-Week Low": round(hist["Low"].min(), 2),
     }
 
-    # Display in columns
+    
     col1, col2, col3 = st.columns(3)
     col4, col5 = st.columns(2)
 
