@@ -19,10 +19,8 @@ texto = '''
 - **Closing Price Charts**: Visualization of historical prices for each asset.
 - **Daily Returns**: Calculation of daily returns to analyze volatility.
 
-### 1.3. Risk-Free Rates :heavy_dollar_sign:
-- **Interest Rate Sources**: Integrates  FRED APIs to obtain risk-free rates.
 
-### 1.4. Risk and Return Metrics Calculation :straight_ruler:
+### 1.3. Risk and Return Metrics Calculation :straight_ruler:
 - **Value at Risk (VaR)**: Estimates the maximum risk over a given period under normal conditions.
 - **Excess Kurtosis**: Analyzes the risk of extreme events in the assets.
 - **Sortino Ratio**: Risk-adjusted performance metric focusing on negative returns.
@@ -43,16 +41,7 @@ by comparing them against the Nifty 50 index performance.
 - **Custom Financial Views**: Adjusts portfolio optimization based on expected returns for each
 asset using the Black-Litterman model. 
 
-## Technologies and Libraries :books:
 
-- **Python**: Main programming language.
-- **Yahoo Finance API**: Market data download.
-- **Banxico and FRED APIs**: Risk-free interest rates.
-- **Pandas**: Data manipulation.
-- **NumPy**: Numerical operations.
-- **Matplotlib and Seaborn**: Financial data visualization.
-- **Scipy**: Optimization tools.
-- **Streamlit**: App development tool. :streamlit:
 '''
 
 st.markdown(texto)
