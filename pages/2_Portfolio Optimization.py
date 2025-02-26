@@ -9,11 +9,11 @@ from numpy.linalg import multi_dot
 from datetime import datetime
 import plotly.express as px
 
-# Page Config
+
 st.set_page_config(page_title="Portfolio Optimization", page_icon="mag")
 st.title("Portfolio Optimization & Backtesting")
 
-# Fetch stock data directly using yfinance
+
 nifty50_stocks = [
     "RELIANCE.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "TCS.NS",
     "HINDUNILVR.NS", "ITC.NS", "KOTAKBANK.NS", "SBIN.NS", "ASIANPAINT.NS",
@@ -48,17 +48,17 @@ else:
     st.warning("No data available. Please select valid tickers and date range.")
     st.stop()
 
-# Check for NaN or Infinite Values
+
 if st.session_state.returns.isnull().values.any() or np.isinf(st.session_state.returns.values).any():
     st.error("❌ Data contains NaN or infinite values. Please adjust the date range or stock selection.")
     st.stop()
 
-# Ensure Enough Data Points for Optimization
+
 if len(st.session_state.returns) < len(st.session_state.returns.columns):
     st.error("❌ Not enough data points for optimization. Try a longer date range.")
     st.stop()
 
-# Additional Visualizations
+
 st.markdown("## Data Visualization :bar_chart:")
 
 fig1 = px.line(st.session_state.data, title="Stock Closing Prices Over Time")
